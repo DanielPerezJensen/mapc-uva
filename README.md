@@ -6,8 +6,9 @@
 *** for contributors-url, forks-url, etc. This is an optional, concise syntax you may use.
 *** https://www.markdownguide.org/basic-syntax/#reference-style-links
 -->
-[![Contributors][contributors-shield]][contributors-url]
-[![Issues][issues-shield]][issues-url]
+
+<!-- [![Contributors][contributors-shield]][contributors-url]
+[![Issues][issues-shield]][issues-url] -->
 
 
 
@@ -112,7 +113,7 @@ Project Link: [https://github.com/DanielPerezJensen/mapc-uva](https://github.com
 
 <!-- MARKDOWN LINKS & IMAGES -->
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
-[contributors-shield]: https://img.shields.io/github/contributors/othneildrew/Best-README-Template.svg?style=flat-square
+[contributors-shield]: https://img.shields.io/github/contributors/DanielPerezJensen/mapc-uva.svg?style=flat-square
 [contributors-url]: https://github.com/DanielPerezJensen/mapc-uva/graphs/contributors
-[issues-shield]: https://img.shields.io/github/issues/othneildrew/Best-README-Template.svg?style=flat-square
+[issues-shield]: https://img.shields.io/github/issues/DanielPerezJensen/mapc-uva.svg?style=flat-square
 [issues-url]: https://github.com/DanielPerezJensen/mapc-uva/issues
