@@ -61,7 +61,7 @@ class Agent():
         """
         Receives json block and sends request to server
         """
-        self.socket.sendall(request + "\0".encode())
+        self.socket.sendall((request + "\0").encode())
 
     def play(self):
         """
