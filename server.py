@@ -39,7 +39,7 @@ class Server():
 
     def connect_socket(self):
         """
-        Connect to socket and send auth_request
+        Connect to socket and send auth_request.
         """
 
         auth_request = {
@@ -72,7 +72,7 @@ class Server():
 
     def send_request(self, request):
         """
-        Receives request and sends binary-encoded json block to server
+        Receives request and sends binary-encoded json block to server.
 
         parameters
         ----------
@@ -107,7 +107,7 @@ class Server():
     @staticmethod
     def _get_request_id(action_request):
         """
-        Returns the request id of a request-action message from the server
+        Returns the request id of a request-action message from the server.
 
         parameters
         ----------
