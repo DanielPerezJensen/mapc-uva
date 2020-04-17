@@ -1,0 +1,8 @@
+{
+  "type": "action",
+  "content": {
+    "id": 20,
+    "type": "move",
+    "p": ["n"]
+  }
+}
