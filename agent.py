@@ -97,8 +97,12 @@ class Agent(Server):
         direction: str
             One of {n,s,e,w}, representing the direction to the thing the agent wants to detach from.
         """
+<<<<<<< HEAD
         # Create the request.
         detach_request = self._create_action(request_id, "detach", direction)
+=======
+        self.socket.sendall((request + "\0").encode())
+>>>>>>> 65f73af1a4b8a07237bf4d714735a9cf9714648c
 
         # Send the request to the server.
         self.send_request(detach_request)
