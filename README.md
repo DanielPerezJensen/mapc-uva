@@ -81,7 +81,9 @@
 
 <!-- ROADMAP -->
 ## Roadmap
-<img src="images/Roadmap.png" alt="Logo" width="480" height="400">
+<p align="center">
+  <img src="images/Roadmap.png" alt="Logo">
+</p>
 
 
 <!-- CONTRIBUTING -->
