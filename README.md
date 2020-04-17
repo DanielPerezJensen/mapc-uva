@@ -59,7 +59,7 @@
 
 ### Built With
 
-* []()
+* [https://www.python.org/](Python)
 * []()
 * []()
 
@@ -81,7 +81,7 @@
 
 <!-- ROADMAP -->
 ## Roadmap
-
+<img src="images/Roadmap.png" alt="Logo" width="480" height="400">
 
 
 <!-- CONTRIBUTING -->
