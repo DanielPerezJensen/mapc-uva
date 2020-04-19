@@ -1,6 +1,6 @@
-import asyncio
 from agent import Agent
 from spade_bdi.bdi import BDIAgent
+import agentspeak
 
 class CustomBDIAgent(BDIAgent, Agent):
 
@@ -10,10 +10,15 @@ class CustomBDIAgent(BDIAgent, Agent):
 
     def add_custom_actions(self, actions):
 
-        @actions.add_function("bdi_move", (int, str))
+        @actions.add_function("bdi_move", (int, agentspeak.Literal,))
         def bdi_move(request_id, direction):
-            print(request_id, direction)
-            # a.move(request_id, direction)
+            print(request_id, str(direction))
+            a.move(request_id, str(direction))
+            return 1
+
+        @actions.add_function("a_function", (agentspeak.Literal,))
+        def a_function(x):
+            return x
 
     def play(self):
         while True:
@@ -26,10 +31,11 @@ class CustomBDIAgent(BDIAgent, Agent):
 
                 # do something
                 print("doing something")
-                self.bdi.set_belief("car", "green")
-                self.bdi.set_belief("cell_empty", "kaas")
+                # self.bdi.set_belief("car", "red")
+                # self.bdi.remove_belief("car", "red")
+
                 self.bdi.set_belief("cell_empty", request_id, "n")
-                self.bdi.remove_belief("cell_empty", request_id, "n")
+                # self.bdi.remove_belief("cell_empty", request_id, "n")
             elif msg["type"] == "sim-start":
                 pass
             elif msg["type"] == "sim-end":
@@ -42,7 +48,7 @@ class CustomBDIAgent(BDIAgent, Agent):
 
 
 
-a = CustomBDIAgent("agent0@localhost", "0", 'agent.asl', 'agentA0', '1', False)
+a = CustomBDIAgent("agentA0@localhost", "1", 'agent.asl', 'agentA0', '1', False)
 a.start()
 a.play()
 
