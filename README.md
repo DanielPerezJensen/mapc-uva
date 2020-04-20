@@ -59,10 +59,8 @@
 
 ### Built With
 
-* [https://www.python.org/](Python)
-* []()
-* []()
-
+* [Python](https://www.python.org/)
+* [SPADE](https://github.com/javipalanca/spade)
 
 
 <!-- GETTING STARTED -->
@@ -90,27 +88,15 @@
 ## Contributing
 
 
-
 <!-- LICENSE -->
 ## License
-
-
-
-<!-- CONTACT -->
-## Contact
-
-<!-- Your Name - [@twitter_handle](https://twitter.com/twitter_handle) - email
-
-Project Link: [https://github.com/DanielPerezJensen/mapc-uva](https://github.com/DanielPerezJensen/mapc-uva)
- -->
 
 
 <!-- ACKNOWLEDGEMENTS -->
 ## Acknowledgements
 
-* []()
-* []()
-* []()
+* Mostafa Mohajeri Parizi
+* Giovanni Sileno
 
 
 <!-- MARKDOWN LINKS & IMAGES -->
