@@ -1,4 +1,5 @@
 from server import Server
+from graph import Graph
 
 
 class Agent(Server):
@@ -18,8 +19,11 @@ class Agent(Server):
             if msg["type"] == "request-action":
                 request_id = self._get_request_id(msg)
 
-                vision = self.get_vision(msg)
-                print(vision)
+                # If map exists: update, else: create new map
+                try:
+                    self.update_graph(graph, msg)
+                except NameError:
+                    graph = Graph(msg)
 
                 # Choose action
                 self.move(request_id, "n")
@@ -32,37 +36,6 @@ class Agent(Server):
                 self.close_socket()
             else:
                 print(f"Unknown message type from the server: {msg['type']}")
-
-    def get_vision(self, msg):
-        """
-        Uses the agents perception to create a dict, with a (x,y)-tuple as key
-        and a nested dict as value. The nested dict contains the type of 
-        terrain on that coordinate and the things on that location.
-
-        parameters
-        ----------
-        msg: dict
-            The request-action from the server.
-        """
-        vision = {}
-        terrain = msg['content']['percept']['terrain']
-
-        for terrain_option in terrain.keys():
-            for x, y in terrain[terrain_option]:
-                if (x, y) in vision.keys():
-                    vision[(x, y)]["terrain"] = terrain_option
-                else:
-                    vision[(x, y)] = {"terrain":terrain_option, "things":[]}
-
-        for thing in msg['content']['percept']['things']:
-            x, y = thing["x"], thing["y"]
-            if (x, y) in vision.keys():
-                vision[(x, y)]["things"].append((thing["type"], thing["details"]))
-            else:
-                vision[(x, y)] = {"terrain":"empty", 
-                                  "things":[(thing["type"], thing["details"])]}
-
-        return vision
 
 
     def skip(self, request_id):
@@ -104,7 +77,7 @@ class Agent(Server):
         """
         Attaches something to the agent. 
         Note: the agent has to be directly next to it.
-        
+
         parameters
         ----------
         request_id: str 
@@ -167,9 +140,9 @@ class Agent(Server):
         agent: str
             The agent to cooperate with.
         x: int or str
-            The relative x position of the thing
+            The relative x position of the thing.
         y: int or str
-            The relative y position of the thing
+            The relative y position of the thing.
         """
         # Create the request.
         connect_request = self._create_action(request_id, "connect", agent, str(x), str(y))
@@ -311,11 +284,6 @@ class Agent(Server):
         return action
 
 
-    
-
-
-
 if __name__ == "__main__":
     agent = Agent(f"agentA0", "1", print_json=False)
     agent.play()
-
