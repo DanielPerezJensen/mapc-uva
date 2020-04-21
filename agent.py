@@ -18,8 +18,12 @@ class Agent(Server):
             if msg["type"] == "request-action":
                 request_id = self._get_request_id(msg)
 
-                # do something
+                vision = self.get_vision(msg)
+                print(vision)
+
+                # Choose action
                 self.move(request_id, "n")
+
             elif msg["type"] == "sim-start":
                 pass
             elif msg["type"] == "sim-end":
@@ -28,6 +32,37 @@ class Agent(Server):
                 self.close_socket()
             else:
                 print(f"Unknown message type from the server: {msg['type']}")
+
+    def get_vision(self, msg):
+        """
+        Uses the agents perception to create a dict, with a (x,y)-tuple as key
+        and a nested dict as value. The nested dict contains the type of 
+        terrain on that coordinate and the things on that location.
+
+        parameters
+        ----------
+        msg: dict
+            The request-action from the server.
+        """
+        vision = {}
+        terrain = msg['content']['percept']['terrain']
+
+        for terrain_option in terrain.keys():
+            for x, y in terrain[terrain_option]:
+                if (x, y) in vision.keys():
+                    vision[(x, y)]["terrain"] = terrain_option
+                else:
+                    vision[(x, y)] = {"terrain":terrain_option, "things":[]}
+
+        for thing in msg['content']['percept']['things']:
+            x, y = thing["x"], thing["y"]
+            if (x, y) in vision.keys():
+                vision[(x, y)]["things"].append((thing["type"], thing["details"]))
+            else:
+                vision[(x, y)] = {"terrain":"empty", 
+                                  "things":[(thing["type"], thing["details"])]}
+
+        return vision
 
 
     def skip(self, request_id):
@@ -57,7 +92,7 @@ class Agent(Server):
         direction: str
             One of {n,s,e,w}, representing the direction the agent wants to move in.
         """
-        print("moving")
+        print("Moving {}...".format(direction))
         # Create the request.
         move_request = self._create_action(request_id, "move", direction)
 
@@ -281,6 +316,6 @@ class Agent(Server):
 
 
 if __name__ == "__main__":
-    agent = Agent(f"agentA0", "1", print_json=True)
+    agent = Agent(f"agentA0", "1", print_json=False)
     agent.play()
 
