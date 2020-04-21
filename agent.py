@@ -6,7 +6,6 @@ class Agent(Server):
     """
     Class for dummy agents which can connect to the server
     """
-
     def play(self):
         """
         Function that (currently) moves north every iteration
@@ -285,5 +284,5 @@ class Agent(Server):
 
 
 if __name__ == "__main__":
-    agent = Agent(f"agentA0", "1", print_json=False)
+    agent = Agent(f"agentA0", "1", print_json=True)
     agent.play()

@@ -1,15 +1,31 @@
-from collections import defaultdict
 import json
 
 
 class Node(object):
-    def __init__(self, key, terrain="empty", things=[], north=None, east=None,
+    """
+    Creates a node used in the graph
+    """
+    def __init__(self, loc, terrain="empty", things=[], north=None, east=None,
                  south=None, west=None):
+        """
+        Initialize the node
 
-        self.key = key          # coordinates: tuple(x, y)
-        self.terrain = terrain  # str
-        self.things = things     # list containing tuples
-        self.directions = {     # dict containing surrounding nodes
+        Parameters
+        ----------
+        loc: tuple(int, int)
+            The x and y coordinate of the node relative to the graph root
+        terrain: str
+            The type of terrain (empty, obstacle, goal)
+        things: list
+            Things in the node (entities, blocks, dispensers, markers) and
+            details about each.
+        north, east, south, west: Node
+            The node to the corresponding direction from the current node.
+        """
+        self.loc = loc
+        self.terrain = terrain
+        self.things = things
+        self.directions = {
             "north": north,
             "east": east,
             "south": south,
@@ -47,23 +63,44 @@ class Node(object):
 
 
 class Graph(object):
+    """
+    Class used to create and update the graph
+    """
     def __init__(self, msg):
         self.root = Node((0, 0))
         self.current = self.root
         self.nodes = {(0, 0): self.root}
         vision = get_vision(msg)
 
-        # Self.nodes contains all {(x, y):Node} combination currently in the graph.
         for x in range(-5, 6):
             for y in range(-5, 6):
                 if abs(x) + abs(y) <= 5:
-                    self.nodes[(x, y)] = Node((x, y))
-                    # Add information given by get_vision()
+                    if (x, y) in vision.keys():
+                        info = vision[(x, y)]
+                        self.nodes[(x, y)] = Node((x, y),
+                                                  terrain=info["terrain"],
+                                                  things=info["things"])
+                    else:
+                        self.nodes[(x, y)] = Node((x, y))
 
-        # For loop that connects all the nodes in self.nodes by [north, east,
-        # south, west].
+        for current_node in self.nodes.values():
+            x, y = current_node.loc
+            if (x, y-1) in self.nodes.keys():
+                current_node.add_direction(north=self.nodes[(x, y-1)])
 
-    def update_graph(self, graph, msg):
+            if (x+1, y) in self.nodes.keys():
+                current_node.add_direction(east=self.nodes[(x+1, y)])
+
+            if (x, y+1) in self.nodes.keys():
+                current_node.add_direction(south=self.nodes[(x, y+1)])
+
+            if (x-1, y) in self.nodes.keys():
+                current_node.add_direction(west=self.nodes[(x-1, y)])
+
+    def add_neighbours(self, current_node):
+        pass
+
+    def update_graph(self, msg, current):
         """
         Update the graph based on the previous action and results.
 
@@ -74,7 +111,23 @@ class Graph(object):
         msg: dict
             The request-action from the server.
         """
-        pass
+        if msg["content"]["percept"]["lastAction"] == "move" and \
+                msg["content"]["percept"]["lastActionResult"] == "success":
+
+            prev_direction = msg["content"]["percept"]["lastActionParams"]
+            
+            """
+            A. Add new nodes and update paths
+                1) Create new nodes and add paths to current graph.
+                2) Add path from graph to new nodes.
+                3)Exceptions for when new nodes already exist?
+            B. Use get_vision to update events
+            """
+
+        else:
+            print("Nothing to update")
+            return False
+
 
     def get_current(self):
         """
@@ -134,22 +187,36 @@ def get_vision(msg):
     return vision
 
 
-msg = json.loads('{"type":"request-action","content":{"step":0,"id":0,\
-"time":1587299386431,"percept":{"lastActionParams":[],\
-"score":0,"task":"","lastAction":"",\
-"things":[{"x":1,"y":0,"details":"A","type":"entity"},\
-{"x":1,"y":-1,"details":"B","type":"entity"},\
-{"x":1,"y":-1,"details":"A","type":"entity"},\
-{"x":1,"y":0,"details":"B","type":"entity"},\
-{"x":0,"y":0,"details":"A","type":"entity"},\
-{"x":0,"y":0,"details":"B","type":"entity"}],\
-"attached":[],\
-"disabled":false,\
-"terrain":{"obstacle":[[1,4],[0,4],[-1,4],[0,5]]},\
-"lastActionResult":"","tasks":[],"energy":300}, \
-"deadline":1587299390456}}')
+if __name__ == "__main__":
+    msg_1 = json.loads('{"type":"request-action","content":{"step":0,"id":0,\
+        "time":1587299386431,"percept":{"lastActionParams":[],\
+        "score":0,"task":"","lastAction":"",\
+        "things":[{"x":1,"y":0,"details":"A","type":"entity"},\
+        {"x":1,"y":-1,"details":"B","type":"entity"},\
+        {"x":1,"y":-1,"details":"A","type":"entity"},\
+        {"x":1,"y":0,"details":"B","type":"entity"},\
+        {"x":0,"y":0,"details":"A","type":"entity"},\
+        {"x":0,"y":0,"details":"B","type":"entity"}],\
+        "attached":[],\
+        "disabled":false,\
+        "terrain":{"obstacle":[[1,4],[0,4],[-1,4],[0,5]]},\
+        "lastActionResult":"","tasks":[],"energy":300},\
+        "deadline":1587299390456}}')
 
-g = Graph(msg)
-print(len(g.nodes.keys()))
-
-print("\nCongrats, you haven't royally butt-flapped it up yet...")
+    msg_2 = json.loads('{"type":"request-action","content":{"step":1,"id":1,\
+        "time":1587488844089,"percept":{"lastActionParams":["n"],\
+        "score":0,"task":"","lastAction":"move",\
+        "things":[{"x":1,"y":1,"details":"A","type":"entity"},\
+        {"x":0,"y":0,"details":"A","type":"entity"},\
+        {"x":0,"y":1,"details":"B","type":"entity"},\
+        {"x":1,"y":0,"details":"B","type":"entity"},\
+        {"x":1,"y":1,"details":"B","type":"entity"},\
+        {"x":1,"y":0,"details":"A","type":"entity"}],\
+        "attached":[],\
+        "disabled":false,\
+        "terrain":{"obstacle":[[0,5]]},\
+        "lastActionResult":"success","tasks":[],"energy":300},\
+        "deadline":1587488848109}}')
+    
+    g = Graph(msg_1)
+    g.update_graph(msg_2, current)
