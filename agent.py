@@ -1,5 +1,3 @@
-import socket
-import json
 from server import Server
 
 
@@ -59,6 +57,7 @@ class Agent(Server):
         direction: str
             One of {n,s,e,w}, representing the direction the agent wants to move in.
         """
+        print("moving")
         # Create the request.
         move_request = self._create_action(request_id, "move", direction)
 
@@ -150,6 +149,8 @@ class Agent(Server):
         
         parameters
         ----------
+        request_id: str
+            Id of the request-action from the server.
         x1: int or str 
             The relative x position of the first attachment.
         y1: int or str

@@ -1,7 +1,8 @@
 import socket
 import json
 
-class Server():
+
+class Server:
     """
     Class used to communicate with the server
     """
@@ -24,15 +25,15 @@ class Server():
         self._print_json = print_json
 
         # Create socket object.
-        HOST, PORT = "localhost", 12300
+        host, port = "localhost", 12300
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
         try:
             # Connect to server.
-            self.socket.connect((HOST, PORT))
+            self.socket.connect((host, port))
 
         except Exception as e:
-            print(str(e))
+            print(e)
             print("Could not connect to port")
 
         self.connect_socket()
@@ -115,4 +116,3 @@ class Server():
             The action-request of the server.
         """
         return action_request["content"]["id"]
-
