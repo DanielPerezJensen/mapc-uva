@@ -37,7 +37,7 @@ class Node(object):
         self.terrain = terrain
         return True
 
-    # things is a list of tuple(s) (type, detail)
+    # things is a list of triple(s) (type, detail, step)
     def add_things(self, thing):
         for obj in thing:
             self.things.append(obj)
@@ -114,14 +114,33 @@ class Graph(object):
                 msg["content"]["percept"]["lastActionResult"] == "success":
 
             prev_direction = msg["content"]["percept"]["lastActionParams"][0]
+            cx, cy = self.current.loc
 
             if prev_direction == "n":
                 # Update current node and percept
-                cx, cy = self.current.loc
                 self.update_current(self.nodes[(cx, cy-1)])
                 vision, new_empty = get_vision(self, msg, self.current)
-
                 new_nodes = get_new_nodes(self.current, prev_direction)
+
+            elif prev_direction == "e":
+                # Update current node and percept
+                self.update_current(self.nodes[(cx+1, cy)])
+                vision, new_empty = get_vision(self, msg, self.current)
+                new_nodes = get_new_nodes(self.current, prev_direction)
+
+            elif prev_direction == "s":
+                # Update current node and percept
+                self.update_current(self.nodes[(cx, cy+1)])
+                vision, new_empty = get_vision(self, msg, self.current)
+                new_nodes = get_new_nodes(self.current, prev_direction)
+
+            elif prev_direction == "w":
+                # Update current node and percept
+                self.update_current(self.nodes[(cx-1, cy)])
+                vision, new_empty = get_vision(self, msg, self.current)
+                new_nodes = get_new_nodes(self.current, prev_direction)
+            else:
+                pass
 
             for node in new_nodes:
                 if node in self.nodes.keys():
@@ -227,6 +246,7 @@ def get_vision(graph, msg, current_node):
     vision = {}
     terrain_percept = msg['content']['percept']['terrain']
     things_percept = msg['content']['percept']['things']
+    step = msg['content']['step']
     new_empty = []
     
     if graph:
@@ -262,11 +282,11 @@ def get_vision(graph, msg, current_node):
         abs_x, abs_y = agent_x + x, agent_y + y
         if (abs_x, abs_y) in vision.keys():
             vision[(abs_x, abs_y)]["things"].append((thing["type"],
-                                                    thing["details"]))
+                                                    thing["details"], step))
         else:
             vision[(abs_x, abs_y)] = {"terrain": "empty",
                                     "things": [(thing["type"],
-                                                thing["details"])]}
+                                                thing["details"], step)]}
 
     return vision, new_empty
 
@@ -287,16 +307,33 @@ def get_new_nodes(current, direction):
         for x in range(-5, 6):
             if x < 0:
                 y = -5-x
-            if x >= 0:
+            elif x >= 0:
                 y = -5+x
             new_nodes.append((x + current_x , y + current_y))
     
     elif direction == "e":
-        pass
+        for y in range(-5, 6):
+            if y < 0:
+                x = 5+y
+            elif y >= 0:
+                x = 5-y
+            new_nodes.append((x + current_x , y + current_y))
+
     elif direction == "s":
-        pass
+        for x in range(-5, 6):
+            if x < 0:
+                y = 5+x
+            elif x >= 0:
+                y = 5-x
+            new_nodes.append((x + current_x , y + current_y))
+
     elif direction == "w":
-        pass
+        for y in range(-5, 6):
+            if y < 0:
+                x = -5-y
+            elif y >= 0:
+                x = -5+y
+            new_nodes.append((x + current_x , y + current_y))
 
     return new_nodes
 
@@ -333,3 +370,4 @@ if __name__ == "__main__":
 
     g = Graph(msg_1)
     new_empty, new_obstacle = g.update_graph(msg_2)
+    print(get_vision(g, msg_1, Node((0,0))))
