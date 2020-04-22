@@ -70,7 +70,7 @@ class Graph(object):
         self.root = Node((0, 0))
         self.current = self.root
         self.nodes = {(0, 0): self.root}
-        vision = get_vision(msg)
+        vision = get_vision(msg, self.current)
 
         for x in range(-5, 6):
             for y in range(-5, 6):
@@ -100,7 +100,7 @@ class Graph(object):
     def add_neighbours(self, current_node):
         pass
 
-    def update_graph(self, msg, current):
+    def update_graph(self, msg):
         """
         Update the graph based on the previous action and results.
 
@@ -115,7 +115,22 @@ class Graph(object):
                 msg["content"]["percept"]["lastActionResult"] == "success":
 
             prev_direction = msg["content"]["percept"]["lastActionParams"]
-            
+
+            # Change current node
+            if prev_direction == "n":
+                # Update current node and percept
+                x, y = self.current.loc
+                self.update_current(self.nodes[(x, y-1)])
+                vision = get_vision(msg)
+
+                # Get coordinates for new nodes relative to vision info
+                for x in range(-5, 6):
+                    if x < 0:
+                        y = -6-x
+                    if x >= 0:
+                        y = -6+x
+                    new_nodes.append((x, y))
+
             """
             A. Add new nodes and update paths
                 1) Create new nodes and add paths to current graph.
@@ -127,7 +142,6 @@ class Graph(object):
         else:
             print("Nothing to update")
             return False
-
 
     def get_current(self):
         """
@@ -151,11 +165,13 @@ class Graph(object):
         """
         if isinstance(node, Node):
             self.current = node
-            return True
-        return False
+        else:
+            print("---------------------------------------")
+            print("ERROR: New node is not a Node object...")
+            print("---------------------------------------")
 
 
-def get_vision(msg):
+def get_vision(msg, current_node):
     """
     Uses the agents perception to create a dict, with a (x,y)-tuple as key
     and a nested dict as value. The nested dict contains the type of
@@ -166,23 +182,29 @@ def get_vision(msg):
     msg: dict
         The request-action from the server.
     """
+    agent_x, agent_y = current_node.loc
     vision = {}
     terrain = msg['content']['percept']['terrain']
 
     for terrain_option in terrain.keys():
         for x, y in terrain[terrain_option]:
-            if (x, y) in vision.keys():
-                vision[(x, y)]["terrain"] = terrain_option
+            abs_x, abs_y = agent_x + x, agent_y + y
+            if (abs_x, abs_y) in vision.keys():
+                vision[(abs_x, abs_y)]["terrain"] = terrain_option
             else:
-                vision[(x, y)] = {"terrain": terrain_option, "things": []}
+                vision[(abs_x, abs_y)] = {"terrain": terrain_option,
+                                          "things": []}
 
     for thing in msg['content']['percept']['things']:
         x, y = thing["x"], thing["y"]
-        if (x, y) in vision.keys():
-            vision[(x, y)]["things"].append((thing["type"], thing["details"]))
+        abs_x, abs_y = agent_x + x, agent_y + y
+        if (abs_x, abs_y) in vision.keys():
+            vision[(abs_x, abs_y)]["things"].append((thing["type"],
+                                                    thing["details"]))
         else:
-            vision[(x, y)] = {"terrain": "empty",
-                              "things": [(thing["type"], thing["details"])]}
+            vision[(abs_x, abs_y)] = {"terrain": "empty",
+                                      "things": [(thing["type"],
+                                                 thing["details"])]}
 
     return vision
 
@@ -217,6 +239,6 @@ if __name__ == "__main__":
         "terrain":{"obstacle":[[0,5]]},\
         "lastActionResult":"success","tasks":[],"energy":300},\
         "deadline":1587488848109}}')
-    
+
     g = Graph(msg_1)
-    g.update_graph(msg_2, current)
+    g.update_graph(msg_2)
