@@ -116,6 +116,7 @@ class Graph(object):
         """
 
         new_obstacle = []
+        new_empty = []
         if msg["content"]["percept"]["lastAction"] == "move" and \
                 msg["content"]["percept"]["lastActionResult"] == "success":
 

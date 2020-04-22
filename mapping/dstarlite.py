@@ -16,8 +16,6 @@ class DStarLite(object):
         ----------
         graph: object
             Instance of the current graph
-        start: tuple
-            Starting coordinates
         goal: tuple
             Goal coordinates
         """
@@ -29,7 +27,7 @@ class DStarLite(object):
         self.G_VALS = {}
         self.RHS_VALS = {}
         self.Km = 0
-        self.position = graph.current.key
+        self.position = graph.current.loc
         self.goal = goal
         self.queue = PriorityQueue()
         self.queue.put(self.goal, self.calculate_key(self.goal))
@@ -69,7 +67,6 @@ class DStarLite(object):
         return self.g(neighbour) + self.transition_cost(neighbour, node)
 
     def lowest_cost_neighbour(self, node):
-        self.graph.nodes[node].directions.values
         cost = partial(self.lookahead_cost, node)
         return min(self.neighbors(node), key=cost)
 
@@ -134,7 +131,7 @@ class DStarLite(object):
 
             yield self.position
 
-    def update_graph(self, new_graph, new_walls):
+    def update_graph(self, new_graph, new_obs):
         """
         Update the graph with the new observations.
 
@@ -142,14 +139,16 @@ class DStarLite(object):
         ----------
         new_graph: object
             A new Graph (graph.py) instance.
+        new_obs: list
+            A list of all new walls and new free spots in the percept.
         """
 
         self.graph = new_graph
 
-        if new_walls:
+        if new_obs:
             self.Km += self.heuristic(self.last_node, self.position)
             self.last_node = self.position
-            self.update_nodes({node for wallnode in new_walls
+            self.update_nodes({node for wallnode in new_obs
                                 for node in self.neighbors(wallnode)
                                 if (node not in self.graph.nodes or not self.graph.nodes[node]._is_obstacle())})
             self.compute_shortest_path()
@@ -159,22 +158,23 @@ class DStarLite(object):
 
 
 if __name__ == "__main__":
-    GRAPH, START, END = grid_from_string("""
-    ..........
-    ...######.
-    .......A#.
-    ...######.
-    ...#....#.
-    ...#....#.
-    ........#.
-    ........#.
-    ........#Z
-    ........#.
-    """)
-    dstar = DStarLite(GRAPH, START, END)
-    path = [p for p, o, w in dstar.move_to_goal()]
+    # GRAPH, START, END = grid_from_string("""
+    # ..........
+    # ...######.
+    # .......A#.
+    # ...######.
+    # ...#....#.
+    # ...#....#.
+    # ........#.
+    # ........#.
+    # ........#Z
+    # ........#.
+    # """)
+    # dstar = DStarLite(GRAPH, START, END)
+    # path = [p for p, o, w in dstar.move_to_goal()]
 
-    print("The graph (A=Start, Z=Goal)")
-    draw_grid(GRAPH, width=3, start=START, goal=END)
-    print("\n\nPath taken (@ symbols)")
-    draw_grid(GRAPH, width=3, path=path)
+    # print("The graph (A=Start, Z=Goal)")
+    # draw_grid(GRAPH, width=3, start=START, goal=END)
+    # print("\n\nPath taken (@ symbols)")
+    # draw_grid(GRAPH, width=3, path=path)
+    pass

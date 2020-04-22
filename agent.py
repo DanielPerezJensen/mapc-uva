@@ -1,11 +1,13 @@
 from server import Server
-from graph import Graph
+from mapping.graph import Graph
+from mapping.dstarlite import DStarLite
 
 
 class Agent(Server):
     """
     Class for dummy agents which can connect to the server
     """
+
     def play(self):
         """
         Function that (currently) moves north every iteration
@@ -20,21 +22,52 @@ class Agent(Server):
 
                 # If map exists: update, else: create new map
                 try:
-                    self.update_graph(graph, msg)
-                except NameError:
-                    graph = Graph(msg)
+                    self.graph.update_graph(msg)
+                except AttributeError:
+                    self.graph = Graph(msg)
+                
+                self.nav_to((0, -10), request_id)
 
                 # Choose action
                 self.move(request_id, "n")
-
             elif msg["type"] == "sim-start":
-                pass
+                print("Simulation starting")
             elif msg["type"] == "sim-end":
                 pass
             elif msg["type"] == "bye":
                 self.close_socket()
             else:
                 print(f"Unknown message type from the server: {msg['type']}")
+
+    def nav_to(self, loc, request_id):
+        """
+        Navigate to coordinates relative to the starting position of the robot
+
+        parameters
+        ----------
+        loc: tuple
+            x and y coordinates of the goal location.
+        request_id: str
+            Id of the request_action for the first step
+        """
+        dstar = DStarLite(self.graph, loc)
+
+        for step in dstar.move_to_goal():
+            print(f"requested loc = {step}")
+            self.move(request_id, "n")
+
+            msg = self.receive_msg()
+
+            while msg["type"] != "request-action":
+                msg = self.receive_msg()
+
+            # update graph
+            new_empty, new_obstacle = self.graph.update_graph(msg)
+            print(new_empty, new_obstacle)
+
+            # update path
+            dstar.update_graph(self.graph, new_empty + new_obstacle)
+            
 
 
     def skip(self, request_id):
@@ -64,7 +97,7 @@ class Agent(Server):
         direction: str
             One of {n,s,e,w}, representing the direction the agent wants to move in.
         """
-        print("Moving {}...".format(direction))
+        print("moving")
         # Create the request.
         move_request = self._create_action(request_id, "move", direction)
 
@@ -76,7 +109,7 @@ class Agent(Server):
         """
         Attaches something to the agent. 
         Note: the agent has to be directly next to it.
-
+        
         parameters
         ----------
         request_id: str 
@@ -139,9 +172,9 @@ class Agent(Server):
         agent: str
             The agent to cooperate with.
         x: int or str
-            The relative x position of the thing.
+            The relative x position of the thing
         y: int or str
-            The relative y position of the thing.
+            The relative y position of the thing
         """
         # Create the request.
         connect_request = self._create_action(request_id, "connect", agent, str(x), str(y))
@@ -283,6 +316,11 @@ class Agent(Server):
         return action
 
 
+    
+
+
+
 if __name__ == "__main__":
     agent = Agent(f"agentA0", "1", print_json=True)
     agent.play()
+
