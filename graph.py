@@ -61,6 +61,12 @@ class Node(object):
         if isinstance(west, Node):
             self.directions["west"] = west
 
+    def _is_obstacle(self):
+        if self.terrain == "empty":
+            return False
+        else:
+            return True
+
 
 class Graph(object):
     """
@@ -229,6 +235,7 @@ class Graph(object):
             print("---------------------------------------")
             print("ERROR: New node is not a Node object...")
             print("---------------------------------------")
+
 
 
 def get_vision(graph, msg, current_node):
