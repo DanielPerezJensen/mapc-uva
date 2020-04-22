@@ -45,6 +45,12 @@ class Node(object):
         if isinstance(west, Node):
             self.directions["west"] = west
 
+    def _is_obstacle(self):
+        if self.terrain == "empty":
+            return False
+        else:
+            return True
+
 
 class Graph(object):
     def __init__(self, msg):
@@ -100,6 +106,7 @@ class Graph(object):
             self.current = node
             return True
         return False
+
 
 
 def get_vision(msg):
