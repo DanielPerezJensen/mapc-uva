@@ -37,10 +37,10 @@ class Node(object):
         self.terrain = terrain
         return True
 
-    # thing is a tuple (type, detail)
-    def add_thing(self, thing):
-        self.things.append(thing)
-        return True
+    # things is a list of tuple(s) (type, detail)
+    def add_things(self, thing):
+        for obj in thing:
+            self.things.append(obj)
 
     def remove_thing(self, thing):
         if thing in self.things:
@@ -70,7 +70,7 @@ class Graph(object):
         self.root = Node((0, 0))
         self.current = self.root
         self.nodes = {(0, 0): self.root}
-        vision = get_vision(msg, self.current)
+        vision, _ = get_vision(None, msg, self.current)
 
         for x in range(-5, 6):
             for y in range(-5, 6):
@@ -97,9 +97,6 @@ class Graph(object):
             if (x-1, y) in self.nodes.keys():
                 current_node.add_direction(west=self.nodes[(x-1, y)])
 
-    def add_neighbours(self, current_node):
-        pass
-
     def update_graph(self, msg):
         """
         Update the graph based on the previous action and results.
@@ -111,37 +108,81 @@ class Graph(object):
         msg: dict
             The request-action from the server.
         """
+
+        new_obstacle = []
         if msg["content"]["percept"]["lastAction"] == "move" and \
                 msg["content"]["percept"]["lastActionResult"] == "success":
 
-            prev_direction = msg["content"]["percept"]["lastActionParams"]
+            prev_direction = msg["content"]["percept"]["lastActionParams"][0]
 
-            # Change current node
             if prev_direction == "n":
                 # Update current node and percept
-                x, y = self.current.loc
-                self.update_current(self.nodes[(x, y-1)])
-                vision = get_vision(msg)
+                cx, cy = self.current.loc
+                self.update_current(self.nodes[(cx, cy-1)])
+                vision, new_empty = get_vision(self, msg, self.current)
 
-                # Get coordinates for new nodes relative to vision info
-                for x in range(-5, 6):
-                    if x < 0:
-                        y = -6-x
-                    if x >= 0:
-                        y = -6+x
-                    new_nodes.append((x, y))
+                new_nodes = get_new_nodes(self.current, prev_direction)
 
-            """
-            A. Add new nodes and update paths
-                1) Create new nodes and add paths to current graph.
-                2) Add path from graph to new nodes.
-                3)Exceptions for when new nodes already exist?
-            B. Use get_vision to update events
-            """
+            for node in new_nodes:
+                if node in self.nodes.keys():
+                    temp = self.nodes[node]
+                    # Update vision information to new node
+                    # TODO: Don't add duplicates
+                    if temp.loc in vision.keys():
+                        temp.set_terrain(vision[temp.loc]["terrain"])
+                        temp.add_things(vision[temp.loc]["things"])
 
-        else:
-            print("Nothing to update")
-            return False
+                    # Connect node (possibly) in each direction to graph.
+                    self.add_neighbours(temp)
+
+                else:
+                    # Create new node
+                    self.nodes[node] = Node(node)
+                    temp = self.nodes[node]
+
+                    # Add vision information to new node
+                    if temp.loc in vision.keys():
+                        if vision[temp.loc]["terrain"] == "obstacle":
+                            new_obstacle.append(temp.loc)
+
+                        temp.set_terrain(vision[temp.loc]["terrain"])
+                        temp.add_things(vision[temp.loc]["things"])
+
+                    # Connect node (possibly) in each direction to graph.
+                    self.add_neighbours(temp)
+        
+        return new_empty, new_obstacle
+
+
+    def add_neighbours(self, node):
+        """
+        Connect node the graph in (possibly) each direction.
+        """
+        x, y = node.loc
+        # Northern connection
+        if (x, y-1) in self.nodes.keys():
+            # TODO: If these 2 are different, than agent has looped map.
+            node.add_direction(north=self.nodes[(x, y-1)])
+            self.nodes[(x, y-1)].add_direction(south=node)
+        
+        # Eastern connection
+        if (x+1, y) in self.nodes.keys():
+            # TODO: If these 2 are different, than agent has looped map.
+            node.add_direction(east=self.nodes[(x+1, y)])
+            self.nodes[(x+1, y)].add_direction(west=node)
+        
+        # Southern connection
+        if (x, y+1) in self.nodes.keys():
+            # TODO: If these 2 are different, than agent has looped map.
+            node.add_direction(south=self.nodes[(x, y+1)])
+            self.nodes[(x, y+1)].add_direction(north=node)
+        
+        # Western connection
+        if (x-1, y) in self.nodes.keys():
+            # TODO: If these 2 are different, than agent has looped map.
+            node.add_direction(west=self.nodes[(x-1, y)])
+            self.nodes[(x-1, y)].add_direction(east=node)
+
 
     def get_current(self):
         """
@@ -171,7 +212,7 @@ class Graph(object):
             print("---------------------------------------")
 
 
-def get_vision(msg, current_node):
+def get_vision(graph, msg, current_node):
     """
     Uses the agents perception to create a dict, with a (x,y)-tuple as key
     and a nested dict as value. The nested dict contains the type of
@@ -184,18 +225,39 @@ def get_vision(msg, current_node):
     """
     agent_x, agent_y = current_node.loc
     vision = {}
-    terrain = msg['content']['percept']['terrain']
+    terrain_percept = msg['content']['percept']['terrain']
+    things_percept = msg['content']['percept']['things']
+    new_empty = []
+    
+    if graph:
+        # Check if new node became empty. TODO: optimize?
+        vision_nodes = []
+        for x in range(-5, 6):
+            for y in range(-5, 6):
+                if abs(x) + abs(y) <= 5:
+                    vision_nodes.append((x + agent_x, y + agent_y))
+        
+        for node in vision_nodes:
+            if node in graph.nodes.keys():
+                if graph.nodes[node].terrain == "obstacle":
+                    relative_node = [node[0] - agent_x, node[1] - agent_y]
+                    if relative_node not in terrain_percept["obstacle"]:
+                        # Node isn't obstacle anymore -> obstacle got removed
+                        new_empty.append(node)
 
-    for terrain_option in terrain.keys():
-        for x, y in terrain[terrain_option]:
+    # Create terrain information
+    for terrain_option in terrain_percept.keys():
+        for x, y in terrain_percept[terrain_option]:
             abs_x, abs_y = agent_x + x, agent_y + y
             if (abs_x, abs_y) in vision.keys():
                 vision[(abs_x, abs_y)]["terrain"] = terrain_option
             else:
                 vision[(abs_x, abs_y)] = {"terrain": terrain_option,
-                                          "things": []}
+                                        "things": []}
 
-    for thing in msg['content']['percept']['things']:
+    # Create things information
+    # TODO: Add steps to things (tuple -> triple)
+    for thing in things_percept:
         x, y = thing["x"], thing["y"]
         abs_x, abs_y = agent_x + x, agent_y + y
         if (abs_x, abs_y) in vision.keys():
@@ -203,11 +265,40 @@ def get_vision(msg, current_node):
                                                     thing["details"]))
         else:
             vision[(abs_x, abs_y)] = {"terrain": "empty",
-                                      "things": [(thing["type"],
-                                                 thing["details"])]}
+                                    "things": [(thing["type"],
+                                                thing["details"])]}
 
-    return vision
+    return vision, new_empty
 
+def get_new_nodes(current, direction):
+    """
+    Gets coordinates of the new nodes relative to the root node.
+
+    Parameters
+    ----------
+    current: Node
+        The node the agent is currently located
+    direction: str
+        The direction in which the new nodes have to be created.
+    """
+    current_x, current_y = current.loc
+    new_nodes = []
+    if direction == "n":
+        for x in range(-5, 6):
+            if x < 0:
+                y = -5-x
+            if x >= 0:
+                y = -5+x
+            new_nodes.append((x + current_x , y + current_y))
+    
+    elif direction == "e":
+        pass
+    elif direction == "s":
+        pass
+    elif direction == "w":
+        pass
+
+    return new_nodes
 
 if __name__ == "__main__":
     msg_1 = json.loads('{"type":"request-action","content":{"step":0,"id":0,\
@@ -236,9 +327,9 @@ if __name__ == "__main__":
         {"x":1,"y":0,"details":"A","type":"entity"}],\
         "attached":[],\
         "disabled":false,\
-        "terrain":{"obstacle":[[0,5]]},\
+        "terrain":{"obstacle":[[0, 5]]},\
         "lastActionResult":"success","tasks":[],"energy":300},\
         "deadline":1587488848109}}')
 
     g = Graph(msg_1)
-    g.update_graph(msg_2)
+    new_empty, new_obstacle = g.update_graph(msg_2)
