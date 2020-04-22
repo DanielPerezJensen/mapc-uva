@@ -62,7 +62,7 @@ class Node(object):
             self.directions["west"] = west
 
     def _is_obstacle(self):
-        if self.terrain == "empty":
+        if self.terrain == "empty" or self.terrain == "goal":
             return False
         else:
             return True
