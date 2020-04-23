@@ -68,37 +68,30 @@ class Agent(Server):
             x and y coordinates of the goal location.
         request_id: str
             Id of the request_action for the first step
+
+        Returns True if at goal state, False if no path is possible
         """
         dstar = DStarLite(self.graph, goal, self.last_action_move)
 
         for step, recovery_step in dstar.move_to_goal():
             # check if a path is found
             if step:
-                print("-"*20)
                 msg = self.receive_msg()
 
                 while msg["type"] != "request-action":
                     msg = self.receive_msg()
                 
                 location_changed = self.graph.update_current(msg)
-
-                print(f"last loc = {self.graph.current.loc}")
-
                 request_id = self._get_request_id(msg)
                 
                 # check if last move was succesfull
                 if location_changed:
                     direction = self.graph.get_direction(step)
-                    print(f"requested loc = {step}")
                 else:
                     direction = self.graph.get_direction(recovery_step)
-                    print(f"requested loc = {recovery_step} [recovery]")
-
-                print(f"requested dir = {direction}")
 
                 # send a move request in the computed direction
                 if random.random() > 0.8:
-                    print("This request will go wrong")
                     self.skip(request_id)
                 else:
                     self.move(request_id, direction)
