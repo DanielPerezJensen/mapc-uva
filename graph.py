@@ -39,7 +39,10 @@ class Node(object):
 
     # things is a list of triple(s) (type, detail, step)
     def add_things(self, thing):
-        for obj in thing:
+        if isinstance(thing, list):
+            for obj in thing:
+                self.things.append(obj)
+        else:
             self.things.append(obj)
 
     def remove_thing(self, thing):
@@ -145,17 +148,18 @@ class Graph(object):
                 self.update_current(self.nodes[(cx-1, cy)])
                 vision, new_empty = get_vision(self, msg, self.current)
                 new_nodes = get_new_nodes(self.current, prev_direction)
-            else:
-                pass
 
             for node in new_nodes:
                 if node in self.nodes.keys():
                     temp = self.nodes[node]
+
                     # Update vision information to new node
-                    # TODO: Don't add duplicates
                     if temp.loc in vision.keys():
                         temp.set_terrain(vision[temp.loc]["terrain"])
-                        temp.add_things(vision[temp.loc]["things"])
+                        for thing in vision[temp.loc]["things"]:
+                            # Ignores adding the same dispenser twice
+                            if thing[0] != "dispenser":
+                                temp.add_things(thing)
 
                     # Connect node (possibly) in each direction to graph.
                     self.add_neighbours(temp)
@@ -178,36 +182,32 @@ class Graph(object):
         
         return new_empty, new_obstacle
 
-
     def add_neighbours(self, node):
         """
         Connect node the graph in (possibly) each direction.
         """
+        # TODO: If temp->node & node->temp are different nodes than the agent
+        #       has looped the map.
         x, y = node.loc
         # Northern connection
         if (x, y-1) in self.nodes.keys():
-            # TODO: If these 2 are different, than agent has looped map.
             node.add_direction(north=self.nodes[(x, y-1)])
             self.nodes[(x, y-1)].add_direction(south=node)
         
         # Eastern connection
         if (x+1, y) in self.nodes.keys():
-            # TODO: If these 2 are different, than agent has looped map.
             node.add_direction(east=self.nodes[(x+1, y)])
             self.nodes[(x+1, y)].add_direction(west=node)
         
         # Southern connection
         if (x, y+1) in self.nodes.keys():
-            # TODO: If these 2 are different, than agent has looped map.
             node.add_direction(south=self.nodes[(x, y+1)])
             self.nodes[(x, y+1)].add_direction(north=node)
         
         # Western connection
         if (x-1, y) in self.nodes.keys():
-            # TODO: If these 2 are different, than agent has looped map.
             node.add_direction(west=self.nodes[(x-1, y)])
             self.nodes[(x-1, y)].add_direction(east=node)
-
 
     def get_current(self):
         """
@@ -232,10 +232,8 @@ class Graph(object):
         if isinstance(node, Node):
             self.current = node
         else:
-            print("---------------------------------------")
-            print("ERROR: New node is not a Node object...")
-            print("---------------------------------------")
-
+            raise Exception("node should be a Node object.\
+                             The node is of type:{} ".format(type(node)))
 
 
 def get_vision(graph, msg, current_node):
@@ -257,7 +255,7 @@ def get_vision(graph, msg, current_node):
     new_empty = []
     
     if graph:
-        # Check if new node became empty. TODO: optimize?
+        # Check if new node became empty.
         vision_nodes = []
         for x in range(-5, 6):
             for y in range(-5, 6):
@@ -283,7 +281,6 @@ def get_vision(graph, msg, current_node):
                                         "things": []}
 
     # Create things information
-    # TODO: Add steps to things (tuple -> triple)
     for thing in things_percept:
         x, y = thing["x"], thing["y"]
         abs_x, abs_y = agent_x + x, agent_y + y
@@ -377,4 +374,4 @@ if __name__ == "__main__":
 
     g = Graph(msg_1)
     new_empty, new_obstacle = g.update_graph(msg_2)
-    print(get_vision(g, msg_1, Node((0,0))))
+    #print(get_vision(g, msg_1, Node((0,0))))
