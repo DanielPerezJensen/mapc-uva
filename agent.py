@@ -18,9 +18,9 @@ class Agent(Server):
             if msg["type"] == "request-action":
                 request_id = self._get_request_id(msg)
 
-                # If map exists: update, else: create new map
                 try:
-                    self.update_graph(graph, msg)
+                    graph.update_graph(msg)
+                    print("Number of nodes: {}".format(len(graph.nodes.keys())))
                 except NameError:
                     graph = Graph(msg)
 
@@ -284,5 +284,5 @@ class Agent(Server):
 
 
 if __name__ == "__main__":
-    agent = Agent(f"agentA0", "1", print_json=True)
+    agent = Agent(f"agentA0", "1", print_json=False)
     agent.play()
