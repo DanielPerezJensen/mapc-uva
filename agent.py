@@ -1,12 +1,30 @@
 from server import Server
 from mapping.graph import Graph
 from mapping.dstarlite import DStarLite
+import random
 
 
 class Agent(Server):
     """
     Class for dummy agents which can connect to the server
     """
+
+    def __init__(self, user, pw, print_json=False):
+        """
+        Store some information about the agent and the socket so we can 
+        connect to the localhost.
+
+        parameters
+        ----------
+        user: str
+            The username of the agent.
+        pw: str
+            The password of the agent.
+        print_json: bool
+            If the communication jsons should be printed.
+        """
+        super().__init__(user, pw, print_json)
+        self.last_action_move = None
 
     def play(self):
         """
@@ -20,16 +38,17 @@ class Agent(Server):
             if msg["type"] == "request-action":
                 request_id = self._get_request_id(msg)
 
+                # Choose action
+                self.skip(request_id)
+
                 # If map exists: update, else: create new map
                 try:
+                    self.graph.update_current(msg)
                     self.graph.update_graph(msg)
                 except AttributeError:
                     self.graph = Graph(msg)
-                
-                self.nav_to((0, -10), request_id)
 
-                # Choose action
-                self.move(request_id, "n")
+                self.nav_to((-28, 4))
             elif msg["type"] == "sim-start":
                 print("Simulation starting")
             elif msg["type"] == "sim-end":
@@ -39,34 +58,65 @@ class Agent(Server):
             else:
                 print(f"Unknown message type from the server: {msg['type']}")
 
-    def nav_to(self, loc, request_id):
+    def nav_to(self, goal):
         """
-        Navigate to coordinates relative to the starting position of the robot
+        Navigate to coordinates in the agent's local reference frame.
 
         parameters
         ----------
-        loc: tuple
+        goal: tuple
             x and y coordinates of the goal location.
         request_id: str
             Id of the request_action for the first step
         """
-        dstar = DStarLite(self.graph, loc)
+        dstar = DStarLite(self.graph, goal, self.last_action_move)
 
-        for step in dstar.move_to_goal():
-            print(f"requested loc = {step}")
-            self.move(request_id, "n")
-
-            msg = self.receive_msg()
-
-            while msg["type"] != "request-action":
+        for step, recovery_step in dstar.move_to_goal():
+            # check if a path is found
+            if step:
+                print("-"*20)
                 msg = self.receive_msg()
 
-            # update graph
-            new_empty, new_obstacle = self.graph.update_graph(msg)
-            print(new_empty, new_obstacle)
+                while msg["type"] != "request-action":
+                    msg = self.receive_msg()
+                
+                location_changed = self.graph.update_current(msg)
 
-            # update path
-            dstar.update_graph(self.graph, new_empty + new_obstacle)
+                print(f"last loc = {self.graph.current.loc}")
+
+                request_id = self._get_request_id(msg)
+                
+                # check if last move was succesfull
+                if location_changed:
+                    direction = self.graph.get_direction(step)
+                    print(f"requested loc = {step}")
+                else:
+                    direction = self.graph.get_direction(recovery_step)
+                    print(f"requested loc = {recovery_step} [recovery]")
+
+                print(f"requested dir = {direction}")
+
+                # send a move request in the computed direction
+                if random.random() > 0.8:
+                    print("This request will go wrong")
+                    self.skip(request_id)
+                else:
+                    self.move(request_id, direction)
+                    
+            
+                # update graph
+                new_empty, new_obstacle = self.graph.update_graph(msg)
+                # print(new_empty, new_obstacle)
+
+                
+
+                # update path
+                dstar.update_graph(self.graph, new_empty + new_obstacle, location_changed)
+            else:
+                print("No path found")
+                return False
+        
+        return True
             
 
 
@@ -85,6 +135,8 @@ class Agent(Server):
         # Send the request to the server.
         self.send_request(skip_request)
 
+        self.last_action_move = ""
+
 
     def move(self, request_id, direction):
         """
@@ -97,12 +149,13 @@ class Agent(Server):
         direction: str
             One of {n,s,e,w}, representing the direction the agent wants to move in.
         """
-        print("moving")
         # Create the request.
         move_request = self._create_action(request_id, "move", direction)
 
         # Send the request to the server.
         self.send_request(move_request)
+
+        self.last_action_move = direction
 
 
     def attach(self, request_id, direction):
@@ -123,6 +176,8 @@ class Agent(Server):
         # Send the request to the server.
         self.send_request(attach_request)
 
+        self.last_action_move = ""
+
 
     def detach(self, request_id, direction):
         """
@@ -142,6 +197,8 @@ class Agent(Server):
         # Send the request to the server.
         self.send_request(detach_request)
 
+        self.last_action_move = ""
+
 
     def rotate(self, request_id, direction):
         """
@@ -159,6 +216,8 @@ class Agent(Server):
 
         # Send the request to the server.
         self.send_request(rotate_request)
+
+        self.last_action_move = ""
 
 
     def connect(self, request_id, agent, x, y):
@@ -181,6 +240,8 @@ class Agent(Server):
 
         # Send the request to the server.
         self.send_request(connect_request)
+
+        self.last_action_move = ""
 
 
     def disconnect(self, request_id, x1, y1, x2, y2):
@@ -205,6 +266,8 @@ class Agent(Server):
 
         # Send the request to the server.
         self.send_request(disconnect_request)
+        
+        self.last_action_move = ""
 
     
     def request(self, request_id, direction):
@@ -225,6 +288,8 @@ class Agent(Server):
         # Send the request to the server.
         self.send_request(request_request)
 
+        self.last_action_move = ""
+
 
     def submit(self, request_id, task):
         """
@@ -242,6 +307,8 @@ class Agent(Server):
 
         # Send the request to the server.
         self.send_request(submit_request)
+
+        self.last_action_move = ""
 
 
     def clear(self, request_id, x, y):
@@ -265,6 +332,8 @@ class Agent(Server):
         # Send the request to the server.
         self.send_request(clear_request)
 
+        self.last_action_move = ""
+
     
     def accept(self, request_id, task):
         """
@@ -284,6 +353,8 @@ class Agent(Server):
 
         # Send the request to the server.
         self.send_request(accept_request)
+
+        self.last_action_move = ""
 
     
 
@@ -321,6 +392,6 @@ class Agent(Server):
 
 
 if __name__ == "__main__":
-    agent = Agent(f"agentA0", "1", print_json=True)
+    agent = Agent(f"agentA0", "1", print_json=False)
     agent.play()
 

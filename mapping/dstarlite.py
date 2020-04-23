@@ -1,14 +1,11 @@
 from collections import deque
 from functools import partial
 
-from pydstarlite.utility import draw_grid
 from pydstarlite.priority_queue import PriorityQueue
-# from pydstarlite.grid import AgentViewGrid, Graph
-from pydstarlite.utility import grid_from_string
 
 
 class DStarLite(object):
-    def __init__(self, graph, goal):
+    def __init__(self, graph, goal, last_action):
         """
         Find the path to the goal location from the current position
 
@@ -17,7 +14,9 @@ class DStarLite(object):
         graph: object
             Instance of the current graph
         goal: tuple
-            Goal coordinates
+            Goal x and y coordinates
+        last_action: str
+            The direction of last move performed by the agent or an empty string
         """
 
         # Init the graph
@@ -32,6 +31,19 @@ class DStarLite(object):
         self.queue = PriorityQueue()
         self.queue.put(self.goal, self.calculate_key(self.goal))
         self.back_pointers[self.goal] = None
+
+        # check for the last action
+        if last_action:
+            (cx, cy) = self.position
+            if last_action == "n":
+                self.position = (cx, cy-1)
+            elif last_action == "s":
+                self.position = (cx, cy+1)
+            elif last_action == "w":
+                self.position = (cx-1, cy)
+            elif last_action == "e":
+                self.position = (cx+1, cy)
+
 
     def transition_cost(self, from_node, to_node):
         """
@@ -120,61 +132,50 @@ class DStarLite(object):
         return self.back_pointers.copy(), self.G_VALS.copy()
 
     def move_to_goal(self):
-        self.compute_shortest_path()
-        self.last_node = self.position
+        """
+        Generator object that yields the best next step at each call.
+        """
+        if self.position != self.goal:
+            self.compute_shortest_path()
 
-        while self.position != self.goal:
-            if self.g(self.position) == float('inf'):
-                raise Exception("No path")
+            while self.position != self.goal:
+                if self.g(self.position) == float('inf'):
+                    yield False, False
 
-            self.position = self.lowest_cost_neighbour(self.position)
+                self.last_node = self.graph.current.loc
 
-            yield self.position
+                self.position = self.lowest_cost_neighbour(self.position)
+                self.recovery_loc = self.lowest_cost_neighbour(self.last_node)
+                # yield the next step to be taken, and the step to be taken if the last step failed
+                yield self.position, self.recovery_loc
 
-    def update_graph(self, new_graph, new_obs):
+
+    def update_graph(self, new_graph, new_obs, step_sent):
         """
         Update the graph with the new observations.
 
         parameters
         ----------
         new_graph: object
-            A new Graph (graph.py) instance.
+            The updated Graph (graph.py) instance.
         new_obs: list
             A list of all new walls and new free spots in the percept.
+        step_sent: bool
+            Indicating if the desired action was sent to the server, 
+            if not, the recovery action was sent.
         """
 
         self.graph = new_graph
 
+        if not step_sent:
+            self.position = self.recovery_loc
+        
+        # Update the path if there are new observations
         if new_obs:
             self.Km += self.heuristic(self.last_node, self.position)
-            self.last_node = self.position
+            
             self.update_nodes({node for wallnode in new_obs
                                 for node in self.neighbors(wallnode)
                                 if (node not in self.graph.nodes or not self.graph.nodes[node]._is_obstacle())})
             self.compute_shortest_path()
-
-
-
-
-
-if __name__ == "__main__":
-    # GRAPH, START, END = grid_from_string("""
-    # ..........
-    # ...######.
-    # .......A#.
-    # ...######.
-    # ...#....#.
-    # ...#....#.
-    # ........#.
-    # ........#.
-    # ........#Z
-    # ........#.
-    # """)
-    # dstar = DStarLite(GRAPH, START, END)
-    # path = [p for p, o, w in dstar.move_to_goal()]
-
-    # print("The graph (A=Start, Z=Goal)")
-    # draw_grid(GRAPH, width=3, start=START, goal=END)
-    # print("\n\nPath taken (@ symbols)")
-    # draw_grid(GRAPH, width=3, path=path)
-    pass
+        
