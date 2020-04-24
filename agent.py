@@ -90,11 +90,8 @@ class Agent(Server):
                 else:
                     direction = self.graph.get_direction(recovery_step)
 
-                # send a move request in the computed direction
-                if random.random() > 0.8:
-                    self.skip(request_id)
-                else:
-                    self.move(request_id, direction)
+                # move in the desired direction
+                self.move(request_id, direction)
                     
             
                 # update graph
