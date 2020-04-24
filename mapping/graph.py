@@ -43,7 +43,7 @@ class Node(object):
             for obj in thing:
                 self.things.append(obj)
         else:
-            self.things.append(obj)
+            self.things.append(thing)
 
     def remove_thing(self, thing):
         if thing in self.things:
@@ -75,22 +75,16 @@ class Graph(object):
     """
     Class used to create and update the graph
     """
-    def __init__(self, msg):
-        self.root = Node((0, 0))
-        self.current = self.root
-        self.nodes = {(0, 0): self.root}
-        vision, _ = get_vision(None, msg, self.current)
-
+    def __init__(self):
+        self.nodes = {}
+        
         for x in range(-5, 6):
             for y in range(-5, 6):
                 if abs(x) + abs(y) <= 5:
-                    if (x, y) in vision.keys():
-                        info = vision[(x, y)]
-                        self.nodes[(x, y)] = Node((x, y),
-                                                  terrain=info["terrain"],
-                                                  things=info["things"])
-                    else:
-                        self.nodes[(x, y)] = Node((x, y))
+                    self.nodes[(x, y)] = Node((x, y))
+
+        self.root = self.nodes[(0, 0)]
+        self.current = self.root
 
         for current_node in self.nodes.values():
             x, y = current_node.loc

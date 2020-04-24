@@ -25,6 +25,7 @@ class Agent(Server):
         """
         super().__init__(user, pw, print_json)
         self.last_action_move = None
+        self.graph = Graph()
 
     def play(self):
         """
@@ -41,12 +42,8 @@ class Agent(Server):
                 # Choose action
                 self.skip(request_id)
 
-                # If map exists: update, else: create new map
-                try:
-                    self.graph.update_current(msg)
-                    self.graph.update_graph(msg)
-                except AttributeError:
-                    self.graph = Graph(msg)
+                # self.graph.update_current(msg)
+                self.graph.update_graph(msg)
 
                 self.nav_to((-28, 4))
             elif msg["type"] == "sim-start":
