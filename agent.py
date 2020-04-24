@@ -96,8 +96,6 @@ class Agent(Server):
             
                 # update graph
                 new_empty, new_obstacle = self.graph.update_graph(msg)
-                # print(new_empty, new_obstacle)
-
                 
 
                 # update path
