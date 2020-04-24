@@ -65,7 +65,7 @@ class Node(object):
             self.directions["west"] = west
 
     def _is_obstacle(self):
-        if self.terrain == "empty" or self.terrain == "goal":
+        if self.terrain in ["empty", "goal"]:
             return False
         else:
             return True
@@ -106,19 +106,19 @@ class Graph(object):
             if (x-1, y) in self.nodes.keys():
                 current_node.add_direction(west=self.nodes[(x-1, y)])
 
-    def update_graph(self, msg):
+    def update_current(self, msg):
         """
-        Update the graph based on the previous action and results.
+        Update the Agent's current location 
+        based on the previous action and results.
 
         Parameters
-        ---------
-        graph: Graph
-            The graph created by the agent.
+        ----------
         msg: dict
             The request-action from the server.
-        """
 
-        new_obstacle = []
+        Returns True if the location has been updated,
+        False if is has not been changed
+        """
         if msg["content"]["percept"]["lastAction"] == "move" and \
                 msg["content"]["percept"]["lastActionResult"] == "success":
 
@@ -126,26 +126,63 @@ class Graph(object):
             cx, cy = self.current.loc
 
             if prev_direction == "n":
-                # Update current node and percept
-                self.update_current(self.nodes[(cx, cy-1)])
+                new_loc = self.nodes[(cx, cy-1)]
+            elif prev_direction == "e":
+                new_loc = self.nodes[(cx+1, cy)]
+            elif prev_direction == "s":
+                new_loc = self.nodes[(cx, cy+1)]
+            elif prev_direction == "w":
+                new_loc = self.nodes[(cx-1, cy)]
+
+            if isinstance(new_loc, Node):
+                self.current = new_loc
+            else:
+                print("---------------------------------------")
+                print("ERROR: New node is not a Node object...")
+                print("---------------------------------------")
+
+            # the location has changed
+            return True
+
+        # the location has not changed
+        return False
+
+
+    def update_graph(self, msg):
+        """
+        Update the graph based on the previous action and results.
+
+        Parameters
+        ----------
+        msg: dict
+            The request-action from the server.
+        """
+
+        new_obstacle = []
+        new_empty = []
+        if msg["content"]["percept"]["lastAction"] == "move" and \
+                msg["content"]["percept"]["lastActionResult"] == "success":
+
+            prev_direction = msg["content"]["percept"]["lastActionParams"][0]
+            cx, cy = self.current.loc
+
+            if prev_direction == "n":
+                # Update percept
                 vision, new_empty = get_vision(self, msg, self.current)
                 new_nodes = get_new_nodes(self.current, prev_direction)
 
             elif prev_direction == "e":
                 # Update current node and percept
-                self.update_current(self.nodes[(cx+1, cy)])
                 vision, new_empty = get_vision(self, msg, self.current)
                 new_nodes = get_new_nodes(self.current, prev_direction)
 
             elif prev_direction == "s":
                 # Update current node and percept
-                self.update_current(self.nodes[(cx, cy+1)])
                 vision, new_empty = get_vision(self, msg, self.current)
                 new_nodes = get_new_nodes(self.current, prev_direction)
 
             elif prev_direction == "w":
                 # Update current node and percept
-                self.update_current(self.nodes[(cx-1, cy)])
                 vision, new_empty = get_vision(self, msg, self.current)
                 new_nodes = get_new_nodes(self.current, prev_direction)
 
@@ -209,6 +246,28 @@ class Graph(object):
             node.add_direction(west=self.nodes[(x-1, y)])
             self.nodes[(x-1, y)].add_direction(east=node)
 
+    def get_direction(self, loc):
+        """
+        Returns the direction of the given location 
+        relative to the current location.
+        
+        parameters
+        ----------
+        loc: tuple
+            x and y coordinates of given location. 
+            Should be adjacent to the current location.
+        """
+        if loc[0] > self.current.loc[0]:
+            return "e"
+        elif loc[0] < self.current.loc[0]:
+            return "w"
+        elif loc[1] > self.current.loc[1]:
+            return "s"
+        elif loc[1] < self.current.loc[1]:
+            return "n"
+        else:
+            return ""
+
     def get_current(self):
         """
         Returns the node of the agent's current location.
@@ -219,21 +278,6 @@ class Graph(object):
             The node of the agent's current location.
         """
         return self.current
-
-    def update_current(self, node):
-        """
-        Update the agent's current location.
-
-        Parameters
-        ----------
-        node: Node
-            The node on which the agent is currently place.
-        """
-        if isinstance(node, Node):
-            self.current = node
-        else:
-            raise Exception("node should be a Node object.\
-                             The node is of type:{} ".format(type(node)))
 
 
 def get_vision(graph, msg, current_node):
