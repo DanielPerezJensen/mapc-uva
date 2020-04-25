@@ -39,13 +39,12 @@ class Agent(Server):
             if msg["type"] == "request-action":
                 request_id = self._get_request_id(msg)
 
-                # Choose action
-                self.skip(request_id)
+                self.graph.update_current(msg)
+                x, y = self.graph.update_graph(msg)
+                print(x, y)
+                self.move(request_id, 'n')
 
-                # self.graph.update_current(msg)
-                self.graph.update_graph(msg)
-
-                self.nav_to((-28, 4))
+                #self.nav_to((-28, 4))
             elif msg["type"] == "sim-start":
                 print("Simulation starting")
             elif msg["type"] == "sim-end":
@@ -376,6 +375,6 @@ class Agent(Server):
 
 
 if __name__ == "__main__":
-    agent = Agent(f"agentA0", "1", print_json=False)
+    agent = Agent(f"agentA0", "1", print_json=True)
     agent.play()
 

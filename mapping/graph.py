@@ -35,7 +35,9 @@ class Node(object):
     # terrain is a str
     def set_terrain(self, terrain):
         self.terrain = terrain
-        return True
+
+    def set_loc(self, new_loc):
+        self.loc = new_loc    
 
     # things is a list of triple(s) (type, detail, step)
     def add_things(self, thing):
@@ -100,6 +102,19 @@ class Graph(object):
             if (x-1, y) in self.nodes.keys():
                 current_node.add_direction(west=self.nodes[(x-1, y)])
 
+    def initial_vision(self, msg):
+        new_obstacle = []
+        vision, new_empty = get_vision(self, msg, self.current)
+        for node in self.nodes.keys():
+            if node in vision.keys():
+                self.nodes[node].set_terrain(vision[node]["terrain"])
+                self.nodes[node].add_things(vision[node]["things"])
+
+                if vision[node]["terrain"] == "obstacle":
+                    new_obstacle.append(node)
+        return new_obstacle, new_empty
+        print("Not initial move")
+
     def update_current(self, msg):
         """
         Update the Agent's current location 
@@ -152,33 +167,15 @@ class Graph(object):
             The request-action from the server.
         """
 
-        new_obstacle = []
-        new_empty = []
+        new_obstacle, new_empty= [], []
         if msg["content"]["percept"]["lastAction"] == "move" and \
                 msg["content"]["percept"]["lastActionResult"] == "success":
 
             prev_direction = msg["content"]["percept"]["lastActionParams"][0]
             cx, cy = self.current.loc
-
-            if prev_direction == "n":
-                # Update percept
-                vision, new_empty = get_vision(self, msg, self.current)
-                new_nodes = get_new_nodes(self.current, prev_direction)
-
-            elif prev_direction == "e":
-                # Update current node and percept
-                vision, new_empty = get_vision(self, msg, self.current)
-                new_nodes = get_new_nodes(self.current, prev_direction)
-
-            elif prev_direction == "s":
-                # Update current node and percept
-                vision, new_empty = get_vision(self, msg, self.current)
-                new_nodes = get_new_nodes(self.current, prev_direction)
-
-            elif prev_direction == "w":
-                # Update current node and percept
-                vision, new_empty = get_vision(self, msg, self.current)
-                new_nodes = get_new_nodes(self.current, prev_direction)
+            
+            vision, new_empty = get_vision(self, msg, self.current)
+            new_nodes = get_new_nodes(self.current, prev_direction)
 
             for node in new_nodes:
                 if node in self.nodes.keys():
@@ -211,7 +208,7 @@ class Graph(object):
                     # Connect node (possibly) in each direction to graph.
                     self.add_neighbours(temp)
         
-        return new_empty, new_obstacle
+        return new_obstacle, new_empty
 
     def add_neighbours(self, node):
         """
@@ -272,6 +269,39 @@ class Graph(object):
             The node of the agent's current location.
         """
         return self.current
+
+
+def merge_graphs(g1, g2, offset=(1, 0)):
+    """
+    Merge graphs of two agents. The root node of the first agent (a1) will now 
+    also become the root node of the second agent (a2).
+
+    parameters
+    ----------
+    g1, g2: Graph
+        The graphs of the first and second agent, respectively
+    offset: tuple (int, int)
+        The location of the second agent from the perspective of the first agent.
+    """
+    # TODO: Add step to terrain for up-to-date map merging
+    g1_x, g1_y = g1.get_current().loc
+    g2_x, g2_y = g2.get_current().loc
+
+    # Calculate the root offset
+    rx, ry = (g1_x + offset[0] + g2_x, g1_y + offset[1] + g2_y)
+
+    for x, y in g2.nodes:
+        new_x, new_y = rx + x, ry + y
+
+        if (new_x, new_y) in g1.nodes:
+            # Update info
+            g1.nodes[(new_x, new_y)].set_terrain(g2.nodes[(x, y)].terrain)
+            for thing in g2.nodes[(x, y)].things:
+                if thing not in g1.nodes[(new_x, new_y)].things:
+                    g1.nodes[(new_x, new_y)].add_things(thing)
+        else:
+            g1.nodes[(new_x, new_y)] = g2.nodes[(x, y)]
+            g1.nodes[(new_x, new_y)].set_loc((new_x, new_y))
 
 
 def get_vision(graph, msg, current_node):
@@ -380,36 +410,128 @@ def get_new_nodes(current, direction):
     return new_nodes
 
 if __name__ == "__main__":
-    msg_1 = json.loads('{"type":"request-action","content":{"step":0,"id":0,\
-        "time":1587299386431,"percept":{"lastActionParams":[],\
-        "score":0,"task":"","lastAction":"",\
-        "things":[{"x":1,"y":0,"details":"A","type":"entity"},\
-        {"x":1,"y":-1,"details":"B","type":"entity"},\
-        {"x":1,"y":-1,"details":"A","type":"entity"},\
-        {"x":1,"y":0,"details":"B","type":"entity"},\
-        {"x":0,"y":0,"details":"A","type":"entity"},\
-        {"x":0,"y":0,"details":"B","type":"entity"}],\
-        "attached":[],\
-        "disabled":false,\
-        "terrain":{"obstacle":[[1,4],[0,4],[-1,4],[0,5]]},\
-        "lastActionResult":"","tasks":[],"energy":300},\
-        "deadline":1587299390456}}')
+    msg_1 = json.loads('{\
+        "type":\
+            "request-action",\
+        "content":{\
+            "step":0,\
+            "id":0,\
+            "time":1587299386431,\
+            "percept":{\
+                "lastActionParams":[],\
+                "score":0,\
+                "task":"",\
+                "lastAction":"",\
+                "things":[\
+                    {"x":1,"y":0,"details":"A","type":"entity"},\
+                    {"x":1,"y":-1,"details":"B","type":"entity"},\
+                    {"x":1,"y":-1,"details":"A","type":"entity"},\
+                    {"x":1,"y":0,"details":"B","type":"entity"},\
+                    {"x":0,"y":0,"details":"A","type":"entity"},\
+                    {"x":0,"y":0,"details":"B","type":"entity"}],\
+                "attached":[],\
+                "disabled":false,\
+                "terrain":{\
+                    "obstacle":[[1,4],[0,4],[-1,4],[0,5]]},\
+                "lastActionResult":"",\
+                "tasks":[],\
+                "energy":300},\
+            "deadline":1587299390456}}')
 
-    msg_2 = json.loads('{"type":"request-action","content":{"step":1,"id":1,\
-        "time":1587488844089,"percept":{"lastActionParams":["n"],\
-        "score":0,"task":"","lastAction":"move",\
-        "things":[{"x":1,"y":1,"details":"A","type":"entity"},\
-        {"x":0,"y":0,"details":"A","type":"entity"},\
-        {"x":0,"y":1,"details":"B","type":"entity"},\
-        {"x":1,"y":0,"details":"B","type":"entity"},\
-        {"x":1,"y":1,"details":"B","type":"entity"},\
-        {"x":1,"y":0,"details":"A","type":"entity"}],\
-        "attached":[],\
-        "disabled":false,\
-        "terrain":{"obstacle":[[0, 5]]},\
-        "lastActionResult":"success","tasks":[],"energy":300},\
-        "deadline":1587488848109}}')
+    msg_1_1 = json.loads('{\
+        "type":\
+            "request-action",\
+        "content":{\
+            "step":1,\
+            "id":1,\
+            "time":1587488844089,\
+            "percept":{\
+                "lastActionParams":["n"],\
+                "score":0,\
+                "task":"",\
+                "lastAction":"move",\
+                "things":[\
+                    {"x":1,"y":1,"details":"A","type":"entity"},\
+                    {"x":0,"y":0,"details":"A","type":"entity"},\
+                    {"x":0,"y":1,"details":"B","type":"entity"},\
+                    {"x":1,"y":0,"details":"B","type":"entity"},\
+                    {"x":1,"y":1,"details":"B","type":"entity"},\
+                    {"x":1,"y":0,"details":"A","type":"entity"}],\
+                "attached":[],\
+                "disabled":false,\
+                "terrain":{\
+                    "obstacle":[[0, 5]]},\
+                "lastActionResult":"success",\
+                "tasks":[],\
+                "energy":300},\
+            "deadline":1587488848109}}')
 
-    g = Graph(msg_1)
-    new_empty, new_obstacle = g.update_graph(msg_2)
-    #print(get_vision(g, msg_1, Node((0,0))))
+    msg_2 = json.loads('{\
+        "type":\
+            "request-action",\
+        "content":{\
+            "step":0,\
+            "id":0,\
+            "time":1587837247681,\
+            "percept":{\
+                "lastActionParams":[],\
+                "score":0,\
+                "task":"",\
+                "lastAction":"",\
+                "things":[\
+                    {"x":-1,"y":0,"details":"A","type":"entity"},\
+                    {"x":0,"y":-1,"details":"B","type":"entity"},\
+                    {"x":0,"y":0,"details":"B","type":"entity"},\
+                    {"x":0,"y":-1,"details":"A","type":"entity"},\
+                    {"x":-1,"y":0,"details":"B","type":"entity"},\
+                    {"x":0,"y":0,"details":"A","type":"entity"}],\
+                "attached":[],\
+                "disabled":false,\
+                "terrain":{\
+                    "obstacle":[[0,4],[-1,4],[0,5]]},\
+                "lastActionResult":"",\
+                "tasks":[],\
+                "energy":300},\
+            "deadline":1587837251697}}')
+    
+    msg_2_2 = json.loads('{\
+        "type":\
+            "request-action",\
+        "content":{\
+            "step":1,\
+            "id":1,\
+            "time":1587837759849,\
+            "percept":{\
+                "lastActionParams":["s"],\
+                "score":0,"task":"",\
+                "lastAction":"move",\
+                "things":[\
+                    {"x":-1,"y":-1,"details":"B","type":"entity"},\
+                    {"x":0,"y":-2,"details":"A","type":"entity"},\
+                    {"x":0,"y":-2,"details":"B","type":"entity"},\
+                    {"x":-1,"y":-1,"details":"A","type":"entity"},\
+                    {"x":0,"y":0,"details":"A","type":"entity"},\
+                    {"x":0,"y":-1,"details":"B","type":"entity"}],\
+                "attached":[],\
+                "disabled":false,\
+                "terrain":{\
+                    "obstacle":[[0,3],[1,4],[-1,3],[0,4],[-2,3],[-1,4],[0,5],[5,0],[4,1]]},\
+                "lastActionResult":"success",\
+                "tasks":[],\
+                "energy":300},\
+            "deadline":1587837763855}}')
+
+    g1 = Graph()
+    g1.initial_vision(msg_1)
+
+    g2 = Graph()
+    g2.initial_vision(msg_2)
+
+    print(len(g1.nodes))
+    print(len(g2.nodes))
+
+    graph = merge_graphs(g1, g2)
+
+    print(len(g1.nodes))
+    print(len(g2.nodes))
+
