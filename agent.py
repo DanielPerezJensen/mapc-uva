@@ -90,10 +90,9 @@ class Agent(Server):
                 # move in the desired direction
                 self.move(request_id, direction)
                     
-            
                 # update graph
                 new_empty, new_obstacle = self.graph.update_graph(msg)
-                
+                print(len(self.graph.nodes.keys()))
 
                 # update path
                 dstar.update_graph(self.graph, new_empty + new_obstacle, location_changed)
