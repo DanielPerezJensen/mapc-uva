@@ -1,7 +1,7 @@
 from collections import deque
 from functools import partial
 
-from pydstarlite.priority_queue import PriorityQueue
+from mapping.priority_queue import PriorityQueue
 
 
 class DStarLite(object):
