@@ -1,12 +1,14 @@
 import socket
 import json
+import time
+from threading import Thread
 
 
-class Server:
+class Server(Thread):
     """
     Class used to communicate with the server
     """
-    def __init__(self, user, pw, print_json=False):
+    def __init__(self, user, pw, name, print_json=False):
         """
         Store some information about the agent and the socket so we can 
         connect to the localhost.
@@ -20,6 +22,7 @@ class Server:
         print_json: bool
             If the communication jsons should be printed.
         """
+        super().__init__(name=name)
         self._user = user
         self._pw = pw
         self._print_json = print_json
@@ -58,9 +61,9 @@ class Server:
         response = self.receive_msg()
 
         if response["content"]["result"] == "ok":
-            print("Connection Succesful")
+            print(self.name, ": Connection Succesful")
         else:
-            print("Connection Failed")
+            print(self.name, ": Connection Failed")
 
     
     def close_socket(self):
@@ -101,7 +104,7 @@ class Server:
 
             return json.loads(msg)
         else:
-            print("Retry receiving message...")
+            time.sleep(0.1)
             return self.receive_msg()
 
 

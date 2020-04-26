@@ -6,7 +6,7 @@ class Agent(Server):
     Class for dummy agents which can connect to the server
     """
 
-    def play(self):
+    def run(self):
         """
         Function that (currently) moves north every iteration
         """
@@ -57,7 +57,8 @@ class Agent(Server):
         direction: str
             One of {n,s,e,w}, representing the direction the agent wants to move in.
         """
-        print("moving")
+
+        print(self.name, ": moving.")
         # Create the request.
         move_request = self._create_action(request_id, "move", direction)
 
@@ -281,6 +282,8 @@ class Agent(Server):
 
 
 if __name__ == "__main__":
-    agent = Agent(f"agentA0", "1", print_json=True)
-    agent.play()
+    a_list = []
+    for i in range(15):
+        a_list.append(Agent(f"agentA{i}", "1", f"thread{i}"))
+        a_list[i].start()
 
