@@ -221,7 +221,25 @@ class Graph(object):
         else:
             new_obstacle, new_empty = self.initial_vision(msg)
         
-        return new_obstacle, new_empty
+        return new_obstacle, new_empty, self.new_agents()
+
+    def new_agents(self):
+        new_agents = []
+        if self.step == 0:
+            return [loc[0] for loc in self.get_agents()]
+        else:
+            current = self.get_agents(step=self.step, team="A")
+            current += self.get_agents(step=self.step, team="B")
+            current_loc = [loc[0] for loc in current]
+
+            previous = self.get_agents(step=self.step-1, team="A")
+            previous += self.get_agents(step=self.step-1, team="B")
+            previous_loc = [loc[0] for loc in previous]
+
+            for loc in current_loc:
+                if loc not in previous_loc:
+                    new_agents.append(loc)
+        return new_agents
 
     def add_neighbours(self, node):
         """
@@ -283,7 +301,7 @@ class Graph(object):
         """
         return self.current
 
-    def get_agents(self, step=-1, own_team="A"):
+    def get_agents(self, step=-1, team="A"):
         """
         Returns the locations of friendly agents, on a certain step (if given).
 
@@ -296,7 +314,7 @@ class Graph(object):
         agents = []
         for node in self.nodes:
             for thing in self.nodes[node].things:
-                if thing[0] == "entity" and thing[1] == own_team:
+                if thing[0] == "entity" and thing[1] == team:
                     if step == -1:
                         agents.append((node, thing))
                     elif thing[2] == step:
@@ -564,4 +582,3 @@ if __name__ == "__main__":
     g1.initial_vision(msg_1)
     g1.get_agents(0)
 
-    #graph = merge_graphs(g1, g2)
