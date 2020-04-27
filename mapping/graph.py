@@ -72,8 +72,9 @@ class Node(object):
         if isinstance(west, Node):
             self.directions["west"] = west
 
-    def _is_obstacle(self):
-        if self.terrain in ["empty", "goal"]:
+    def _is_obstacle(self, step):
+        if self.terrain in ["empty", "goal"] and \
+                [agent for agent in self.things if agent[2] == step] == []:
             return False
         else:
             return True
@@ -85,6 +86,7 @@ class Graph(object):
     """
     def __init__(self):
         self.nodes = {}
+        self.step = 0
         
         for x in range(-5, 6):
             for y in range(-5, 6):
@@ -173,7 +175,7 @@ class Graph(object):
         msg: dict
             The request-action from the server.
         """
-
+        self.step = msg['content']['step']
         new_obstacle, new_empty = [], []
         if msg["content"]["percept"]["lastAction"] == "move" and \
                 msg["content"]["percept"]["lastActionResult"] == "success":
