@@ -1,4 +1,7 @@
 from server import Server
+from mapping.graph import Graph
+from mapping.dstarlite import DStarLite
+import random
 
 
 class Agent(Server):
@@ -6,6 +9,25 @@ class Agent(Server):
     Class for dummy agents which can connect to the server
     """
 
+
+    def __init__(self, user, pw, print_json=False):
+        """
+        Store some information about the agent and the socket so we can 
+        connect to the localhost.
+
+        parameters
+        ----------
+        user: str
+            The username of the agent.
+        pw: str
+            The password of the agent.
+        print_json: bool
+            If the communication jsons should be printed.
+        """
+        super().__init__(user, pw, print_json)
+        self.last_action_move = None
+        self.graph = Graph()
+        
     def run(self):
         """
         Function that (currently) moves north every iteration
@@ -18,16 +40,70 @@ class Agent(Server):
             if msg["type"] == "request-action":
                 request_id = self._get_request_id(msg)
 
-                # do something
-                self.move(request_id, "n")
+                self.graph.update_current(msg)
+                self.graph.update_graph(msg)
+
+                self.move(request_id, 'n')
+
+                self.graph.update_graph(msg)
+
+                self.nav_to((-28, 4))
+      
             elif msg["type"] == "sim-start":
-                pass
+                print("Simulation starting")
             elif msg["type"] == "sim-end":
                 pass
             elif msg["type"] == "bye":
                 self.close_socket()
             else:
                 print(f"Unknown message type from the server: {msg['type']}")
+
+    def nav_to(self, goal):
+        """
+        Navigate to coordinates in the agent's local reference frame.
+
+        parameters
+        ----------
+        goal: tuple
+            x and y coordinates of the goal location.
+        request_id: str
+            Id of the request_action for the first step
+
+        Returns True if at goal state, False if no path is possible
+        """
+        dstar = DStarLite(self.graph, goal, self.last_action_move)
+
+        for step, recovery_step in dstar.move_to_goal():
+            # check if a path is found
+            if step:
+                msg = self.receive_msg()
+
+                while msg["type"] != "request-action":
+                    msg = self.receive_msg()
+                
+                location_changed = self.graph.update_current(msg)
+                request_id = self._get_request_id(msg)
+                
+                # check if last move was succesfull
+                if location_changed:
+                    direction = self.graph.get_direction(step)
+                else:
+                    direction = self.graph.get_direction(recovery_step)
+
+                # move in the desired direction
+                self.move(request_id, direction)
+                    
+                # update graph
+                new_empty, new_obstacle = self.graph.update_graph(msg)
+                print(len(self.graph.nodes.keys()))
+
+                # update path
+                dstar.update_graph(self.graph, new_empty + new_obstacle, location_changed)
+            else:
+                print("No path found")
+                return False
+        
+        return True
 
     def skip(self, request_id):
         """
@@ -44,6 +120,12 @@ class Agent(Server):
         # Send the request to the server.
         self.send_request(skip_request)
 
+
+        self.last_action_move = ""
+
+
+
+
     def move(self, request_id, direction):
         """
         Moves the agent in the specified direction
@@ -57,12 +139,17 @@ class Agent(Server):
             move in.
         """
 
+
         print(self.name, ": moving.")
+
         # Create the request.
         move_request = self._create_action(request_id, "move", direction)
 
         # Send the request to the server.
         self.send_request(move_request)
+
+
+        self.last_action_move = direction
 
     def attach(self, request_id, direction):
         """
@@ -83,6 +170,8 @@ class Agent(Server):
         # Send the request to the server.
         self.send_request(attach_request)
 
+        self.last_action_move = ""
+
     def detach(self, request_id, direction):
         """
         Detaches something from the agent.
@@ -102,6 +191,8 @@ class Agent(Server):
         # Send the request to the server.
         self.send_request(detach_request)
 
+        self.last_action_move = ""
+
     def rotate(self, request_id, direction):
         """
         Rotates the agent (and all attached things) 90 degrees in the given
@@ -120,6 +211,8 @@ class Agent(Server):
 
         # Send the request to the server.
         self.send_request(rotate_request)
+
+        self.last_action_move = ""
 
     def connect(self, request_id, agent, x, y):
         """
@@ -142,6 +235,8 @@ class Agent(Server):
 
         # Send the request to the server.
         self.send_request(connect_request)
+
+        self.last_action_move = ""
 
     def disconnect(self, request_id, x1, y1, x2, y2):
         """
@@ -167,6 +262,8 @@ class Agent(Server):
 
         # Send the request to the server.
         self.send_request(disconnect_request)
+        
+        self.last_action_move = ""
 
     def request(self, request_id, direction):
         """
@@ -188,6 +285,8 @@ class Agent(Server):
         # Send the request to the server.
         self.send_request(request_request)
 
+        self.last_action_move = ""
+
     def submit(self, request_id, task):
         """
         Submit the pattern of things that are attached to the agent to
@@ -205,6 +304,8 @@ class Agent(Server):
 
         # Send the request to the server.
         self.send_request(submit_request)
+
+        self.last_action_move = ""
 
     def clear(self, request_id, x, y):
         """
@@ -229,6 +330,8 @@ class Agent(Server):
         # Send the request to the server.
         self.send_request(clear_request)
 
+        self.last_action_move = ""
+
     def accept(self, request_id, task):
         """
         Submit the pattern of things that are attached to the agent to
@@ -250,6 +353,11 @@ class Agent(Server):
         # Send the request to the server.
         self.send_request(accept_request)
 
+        self.last_action_move = ""
+
+    
+
+    ### Helper functions ###
     @staticmethod
     def _create_action(request_id, action_type, *p):
         """
