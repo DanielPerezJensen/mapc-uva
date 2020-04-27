@@ -56,10 +56,10 @@ class DStarLite(object):
         to_node: tuple
             x and y coordinate of second node
         """
-        if from_node in self.graph.nodes and self.graph.nodes[from_node]._is_obstacle():
+        if from_node in self.graph.nodes and self.graph.nodes[from_node]._is_obstacle(self.graph.step, self.graph.current.loc):
                 return float('inf')
         
-        if to_node in self.graph.nodes and self.graph.nodes[to_node]._is_obstacle(): 
+        if to_node in self.graph.nodes and self.graph.nodes[to_node]._is_obstacle(self.graph.step, self.graph.current.loc): 
                 return float('inf')
         
         return 1
@@ -113,7 +113,7 @@ class DStarLite(object):
 
     def compute_shortest_path(self):
         last_nodes = deque(maxlen=10)
-        while self.queue.first_key() < self.calculate_key(self.position) or self.rhs(self.position) != self.g(self.position):
+        while len(self.queue.elements) and (self.queue.first_key() < self.calculate_key(self.position) or self.rhs(self.position) != self.g(self.position)):
             k_old = self.queue.first_key()
             node = self.queue.pop()
             last_nodes.append(node)
@@ -135,9 +135,10 @@ class DStarLite(object):
         """
         Generator object that yields the best next step at each call.
         """
+        
         if self.position != self.goal:
             self.compute_shortest_path()
-
+            
             while self.position != self.goal:
                 if self.g(self.position) == float('inf'):
                     yield False, False
@@ -146,6 +147,7 @@ class DStarLite(object):
 
                 self.position = self.lowest_cost_neighbour(self.position)
                 self.recovery_loc = self.lowest_cost_neighbour(self.last_node)
+
                 # yield the next step to be taken, and the step to be taken if the last step failed
                 yield self.position, self.recovery_loc
 
@@ -176,6 +178,6 @@ class DStarLite(object):
             
             self.update_nodes({node for wallnode in new_obs
                                 for node in self.neighbors(wallnode)
-                                if (node not in self.graph.nodes or not self.graph.nodes[node]._is_obstacle())})
+                                if (node not in self.graph.nodes or not self.graph.nodes[node]._is_obstacle(self.graph.step, self.graph.current.loc))})
             self.compute_shortest_path()
         

@@ -72,12 +72,14 @@ class Node(object):
         if isinstance(west, Node):
             self.directions["west"] = west
 
-    def _is_obstacle(self, step):
-        if self.terrain in ["empty", "goal"] and \
-                [agent for agent in self.things if agent[2] == step] == []:
-            return False
-        else:
-            return True
+    def _is_obstacle(self, step, current):
+        if self.terrain in ["empty", "goal"]:
+            if current == self.loc:
+                return False
+            elif [agent for agent in self.things if agent[2] == step] == []:
+                return False
+            
+        return True
 
 
 class Graph(object):

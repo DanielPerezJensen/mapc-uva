@@ -25,7 +25,7 @@ class DebugAgent(Agent):
             new_node_dict[(x, y)] = node
 
         self.graph.nodes = new_node_dict
-        self.first_step()
+        # self.first_step()
 
         
     def first_step(self):
@@ -45,34 +45,35 @@ class DebugAgent(Agent):
 
                 self.graph.update_graph(msg)
                 break
-        print("Graph updated: ready!")
+        print(self.name, ": graph updated, ready!")
+
 
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--agent",
-        type=str,
-        default="agentA0",
-        help="Name of agent to be initialized"
-    )
-
-    parser.add_argument(
-        "--pw",
-        type=str,
-        default="1",
-        help="Password of agent to be initialized"
-    )
-
-    parser.add_argument(
-        "--loc",
-        type=int,
-        nargs='+',
-        help="Name of agent to be initialized"
-    )
+    global_locs = {
+        "agentA0": (45, 3),
+        "agentA1": (46, 2),
+        "agentA2": (46, 3),
+        "agentA3": (57, 33),
+        "agentA4": (58, 32),
+        "agentA5": (58, 33),
+        "agentA6": (19, 54),
+        "agentA7": (20, 53),
+        "agentA8": (20, 54),
+        "agentA9": (4, 29),
+        "agentA10": (5, 28),
+        "agentA11": (5, 29),
+        "agentA12": (38, 35),
+        "agentA13": (38, 36),
+        "agentA14": (38, 37)
+    }
 
 
-    ARGS = parser.parse_args()
-
-    agent = DebugAgent(ARGS.agent, ARGS.pw, tuple(ARGS.loc))
+    a_list = {}
+    for name, global_loc in global_locs.items():
+        a_list[name] = DebugAgent(name, "1", global_loc, print_json=False)
+        a_list[name].start()
+        
+    for name in global_locs.keys():
+        a_list[name].run()

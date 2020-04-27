@@ -40,17 +40,15 @@ class Agent(Server):
             if msg["type"] == "request-action":
                 request_id = self._get_request_id(msg)
 
+                
+                self.skip(request_id)
                 self.graph.update_current(msg)
                 self.graph.update_graph(msg)
-
-                self.move(request_id, 'n')
-
-                self.graph.update_graph(msg)
-
-                self.nav_to((-28, 4))
+                
+                arrived = self.nav_to((27, 21))
       
             elif msg["type"] == "sim-start":
-                print("Simulation starting")
+                pass
             elif msg["type"] == "sim-end":
                 pass
             elif msg["type"] == "bye":
@@ -71,6 +69,7 @@ class Agent(Server):
 
         Returns True if at goal state, False if no path is possible
         """
+        
         dstar = DStarLite(self.graph, goal, self.last_action_move)
 
         for step, recovery_step in dstar.move_to_goal():
@@ -94,13 +93,12 @@ class Agent(Server):
                 self.move(request_id, direction)
                     
                 # update graph
-                new_empty, new_obstacle = self.graph.update_graph(msg)
-                print(len(self.graph.nodes.keys()))
+                new_empty, new_obstacle, new_agents = self.graph.update_graph(msg)
 
                 # update path
-                dstar.update_graph(self.graph, new_empty + new_obstacle, location_changed)
+                dstar.update_graph(self.graph, new_empty + new_obstacle + new_agents, location_changed)
             else:
-                print("No path found")
+                print(self.name, ": no path found")
                 return False
         
         return True
@@ -123,9 +121,6 @@ class Agent(Server):
 
         self.last_action_move = ""
 
-
-
-
     def move(self, request_id, direction):
         """
         Moves the agent in the specified direction
@@ -140,14 +135,13 @@ class Agent(Server):
         """
 
 
-        print(self.name, ": moving.")
+        print(self.name, ": moving", direction)
 
         # Create the request.
         move_request = self._create_action(request_id, "move", direction)
 
         # Send the request to the server.
         self.send_request(move_request)
-
 
         self.last_action_move = direction
 
@@ -388,5 +382,5 @@ class Agent(Server):
 if __name__ == "__main__":
     a_list = []
     for i in range(15):
-        a_list.append(Agent(f"agentA{i}", "1"))
+        a_list.append(Agent(f"agentA{i}", "1", print_json=False))
         a_list[i].start()
