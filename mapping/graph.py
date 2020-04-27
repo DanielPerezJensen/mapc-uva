@@ -27,7 +27,7 @@ class Node(object):
         self.loc = loc
         self.terrain = terrain
         self.terrain_step = terrain_step
-        self.things = things
+        self.things = []
         self.directions = {
             "north": north,
             "east": east,
@@ -280,6 +280,26 @@ class Graph(object):
             The node of the agent's current location.
         """
         return self.current
+
+    def get_agents(self, step=-1, own_team="A"):
+        """
+        Returns the locations of friendly agents, on a certain step (if given).
+
+        parameters
+        ----------
+        step: int
+            The step on which the agents were seen.
+            If step is -1, give every location.
+        """
+        agents = []
+        for node in self.nodes:
+            for thing in self.nodes[node].things:
+                if thing[0] == "entity" and thing[1] == own_team:
+                    if step == -1:
+                        agents.append((node, thing))
+                    elif thing[2] == step:
+                        agents.append((node, thing))
+        return agents
 
 
 def merge_graphs(g1, g2, offset=(1, 0)):
@@ -540,10 +560,6 @@ if __name__ == "__main__":
 
     g1 = Graph()
     g1.initial_vision(msg_1)
+    g1.get_agents(0)
 
-    g2 = Graph()
-    g2.initial_vision(msg_2)
-
-    graph = merge_graphs(g1, g2)
-
-
+    #graph = merge_graphs(g1, g2)

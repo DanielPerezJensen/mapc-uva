@@ -40,8 +40,8 @@ class Agent(Server):
                 request_id = self._get_request_id(msg)
 
                 self.graph.update_current(msg)
-                x, y = self.graph.update_graph(msg)
-                print(x, y)
+                self.graph.update_graph(msg)
+
                 self.move(request_id, 'n')
 
                 #self.nav_to((-28, 4))
@@ -375,6 +375,6 @@ class Agent(Server):
 
 
 if __name__ == "__main__":
-    agent = Agent(f"agentA0", "1", print_json=True)
+    agent = Agent(f"agentA0", "1", print_json=False)
     agent.play()
 
