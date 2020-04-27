@@ -1,7 +1,0 @@
-{
-  "type": "auth-request",
-  "content": {
-    "user": "agentA1",
-    "pw": "1"
-  }
-}

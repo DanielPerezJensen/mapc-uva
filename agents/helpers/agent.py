@@ -1,33 +1,12 @@
-from server import Server
+from .server import Server
 
 
 class Agent(Server):
     """
-    Class for dummy agents which can connect to the server
+    Super class that can perform all primitive agent functionality
     """
-
-    def run(self):
-        """
-        Function that (currently) moves north every iteration
-        """
-        while True:
-            # Receive a message.
-            msg = self.receive_msg()
-
-            # Parse the response.
-            if msg["type"] == "request-action":
-                request_id = self._get_request_id(msg)
-
-                # do something
-                self.move(request_id, "n")
-            elif msg["type"] == "sim-start":
-                pass
-            elif msg["type"] == "sim-end":
-                pass
-            elif msg["type"] == "bye":
-                self.close_socket()
-            else:
-                print(f"Unknown message type from the server: {msg['type']}")
+    def __init__(self, user, pw, print_json=False):
+        super().__init__(user, pw, print_json)
 
     def skip(self, request_id):
         """
@@ -275,10 +254,3 @@ class Agent(Server):
         }
         # Return the action.
         return action
-
-
-if __name__ == "__main__":
-    a_list = []
-    for i in range(15):
-        a_list.append(Agent(f"agentA{i}", "1"))
-        a_list[i].start()

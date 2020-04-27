@@ -6,12 +6,13 @@ from threading import Thread
 
 class Server(Thread):
     """
-    Class used to communicate with the server
+    Class used to connect, authorize, receive and send messages
+    with/to the server
     """
     def __init__(self, user, pw, print_json=False):
         """
-        Store some information about the agent and the socket so we can
-        connect to the localhost.
+        Store some information about the agent and connect and authorize with
+        the server
 
         parameters
         ----------
@@ -27,25 +28,27 @@ class Server(Thread):
         self._pw = pw
         self._print_json = print_json
 
+        # Create, connect and authorize socket connection
+        self.connect_socket()
+        self.authorize_socket()
+
+    def connect_socket(self):
         # Create socket object.
         host, port = "localhost", 12300
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
+        # Connect to server.
         try:
-            # Connect to server.
             self.socket.connect((host, port))
-
+        # In case of error throw error message
         except Exception as e:
-            print(e)
             print("Could not connect to port")
+            raise e
 
-        self.connect_socket()
-
-    def connect_socket(self):
+    def authorize_socket(self):
         """
-        Connect to socket and send auth_request.
+        Authorize socket by sending auth-request to server
         """
-
         auth_request = {
             "type": "auth-request",
             "content": {
@@ -74,7 +77,7 @@ class Server(Thread):
 
     def send_request(self, request):
         """
-        Receives request and sends binary-encoded json block to server.
+        Takes request as input and sends binary-encoded json block to server.
 
         parameters
         ----------
@@ -90,7 +93,7 @@ class Server(Thread):
 
     def receive_msg(self):
         """
-        Waits for a message from the server and returns it.
+        Returns message from server, if no message is received return None
         """
         msg = self.socket.recv(65536).decode().split("\0")[0]
 
@@ -101,8 +104,7 @@ class Server(Thread):
 
             return json.loads(msg)
         else:
-            time.sleep(0.1)
-            return self.receive_msg()
+            return None
 
     @staticmethod
     def _get_request_id(action_request):
