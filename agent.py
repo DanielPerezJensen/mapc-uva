@@ -44,7 +44,10 @@ class Agent(Server):
                 print(x, y)
                 self.move(request_id, 'n')
 
-                #self.nav_to((-28, 4))
+                self.graph.update_graph(msg)
+
+                self.nav_to((-28, 4))
+      
             elif msg["type"] == "sim-start":
                 print("Simulation starting")
             elif msg["type"] == "sim-end":
