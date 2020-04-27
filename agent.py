@@ -9,6 +9,7 @@ class Agent(Server):
     Class for dummy agents which can connect to the server
     """
 
+
     def __init__(self, user, pw, print_json=False):
         """
         Store some information about the agent and the socket so we can 
@@ -26,8 +27,8 @@ class Agent(Server):
         super().__init__(user, pw, print_json)
         self.last_action_move = None
         self.graph = Graph()
-
-    def play(self):
+        
+    def run(self):
         """
         Function that (currently) moves north every iteration
         """
@@ -103,16 +104,14 @@ class Agent(Server):
                 return False
         
         return True
-            
-
 
     def skip(self, request_id):
         """
         Skip a turn for the agent
-        
+
         parameters
         ----------
-        request_id: str 
+        request_id: str
             Id of the request-action from the server.
         """
         # Create the request.
@@ -121,40 +120,49 @@ class Agent(Server):
         # Send the request to the server.
         self.send_request(skip_request)
 
+
         self.last_action_move = ""
+
+
 
 
     def move(self, request_id, direction):
         """
         Moves the agent in the specified direction
-        
+
         parameters
         ----------
-        request_id: str 
+        request_id: str
             Id of the request-action from the server.
         direction: str
-            One of {n,s,e,w}, representing the direction the agent wants to move in.
+            One of {n,s,e,w}, representing the direction the agent wants to
+            move in.
         """
+
+
+        print(self.name, ": moving.")
+
         # Create the request.
         move_request = self._create_action(request_id, "move", direction)
 
         # Send the request to the server.
         self.send_request(move_request)
 
-        self.last_action_move = direction
 
+        self.last_action_move = direction
 
     def attach(self, request_id, direction):
         """
-        Attaches something to the agent. 
+        Attaches something to the agent.
         Note: the agent has to be directly next to it.
-        
+
         parameters
         ----------
-        request_id: str 
+        request_id: str
             Id of the request-action from the server.
         direction: str
-            One of {n,s,e,w}, representing the direction to the thing the agent wants to attach.
+            One of {n,s,e,w}, representing the direction to the thing the agent
+            wants to attach.
         """
         # Create the request.
         attach_request = self._create_action(request_id, "attach", direction)
@@ -164,18 +172,18 @@ class Agent(Server):
 
         self.last_action_move = ""
 
-
     def detach(self, request_id, direction):
         """
-        Detaches something from the agent. 
+        Detaches something from the agent.
         Note: only the connection between the agent and the thing is released.
-        
+
         parameters
         ----------
-        request_id: str 
+        request_id: str
             Id of the request-action from the server.
         direction: str
-            One of {n,s,e,w}, representing the direction to the thing the agent wants to detach from.
+            One of {n,s,e,w}, representing the direction to the thing the agent
+            wants to detach from.
         """
         # Create the request.
         detach_request = self._create_action(request_id, "detach", direction)
@@ -185,17 +193,18 @@ class Agent(Server):
 
         self.last_action_move = ""
 
-
     def rotate(self, request_id, direction):
         """
-        Rotates the agent (and all attached things) 90 degrees in the given direction. 
-        
+        Rotates the agent (and all attached things) 90 degrees in the given
+        direction.
+
         parameters
         ----------
-        request_id: str 
+        request_id: str
             Id of the request-action from the server.
         direction: str
-            One of {cw, ccw}, representing the rotation direction (clockwise or counterclockwise).
+            One of {cw, ccw}, representing the rotation direction
+            (clockwise or counterclockwise).
         """
         # Create the request.
         rotate_request = self._create_action(request_id, "rotate", direction)
@@ -205,14 +214,13 @@ class Agent(Server):
 
         self.last_action_move = ""
 
-
     def connect(self, request_id, agent, x, y):
         """
         Two agents can use this action to connect things attached to them.
-        
+
         parameters
         ----------
-        request_id: str 
+        request_id: str
             Id of the request-action from the server.
         agent: str
             The agent to cooperate with.
@@ -222,23 +230,23 @@ class Agent(Server):
             The relative y position of the thing
         """
         # Create the request.
-        connect_request = self._create_action(request_id, "connect", agent, str(x), str(y))
+        connect_request = self._create_action(request_id, "connect",
+                                              agent, str(x), str(y))
 
         # Send the request to the server.
         self.send_request(connect_request)
 
         self.last_action_move = ""
 
-
     def disconnect(self, request_id, x1, y1, x2, y2):
         """
         Disconnects two attachments (probably blocks) of the agent.
-        
+
         parameters
         ----------
         request_id: str
             Id of the request-action from the server.
-        x1: int or str 
+        x1: int or str
             The relative x position of the first attachment.
         y1: int or str
              The relative y position of the first attachment.
@@ -248,25 +256,28 @@ class Agent(Server):
             The relative y position of the second attachment.
         """
         # Create the request.
-        disconnect_request = self._create_action(request_id, "disconnect", str(x1), str(y1), str(x2), str(y2))
+        disconnect_request = self._create_action(request_id, "disconnect",
+                                                 str(x1), str(y1),
+                                                 str(x2), str(y2))
 
         # Send the request to the server.
         self.send_request(disconnect_request)
         
         self.last_action_move = ""
 
-    
     def request(self, request_id, direction):
         """
-        Requests a new block from a dispenser. 
-        Note: the agent has to be in a cell adjacent to the dispenser and specify the direction to it.
-        
+        Requests a new block from a dispenser.
+        Note: the agent has to be in a cell adjacent to the dispenser
+        and specify the direction to it.
+
         parameters
         ----------
-        request_id: str 
+        request_id: str
             Id of the request-action from the server.
         direction: str
-            One of {n,s,e,w}, representing the direction to the position of the dispenser to use.
+            One of {n,s,e,w}, representing the direction to the position of
+            the dispenser to use.
         """
         # Create the request.
         request_request = self._create_action(request_id, "request", direction)
@@ -276,14 +287,14 @@ class Agent(Server):
 
         self.last_action_move = ""
 
-
     def submit(self, request_id, task):
         """
-        Submit the pattern of things that are attached to the agent to complete a task.
-        
+        Submit the pattern of things that are attached to the agent to
+        complete a task.
+
         parameters
         ----------
-        request_id: str 
+        request_id: str
             Id of the request-action from the server.
         task: str
             The name of an active task.
@@ -296,16 +307,17 @@ class Agent(Server):
 
         self.last_action_move = ""
 
-
     def clear(self, request_id, x, y):
         """
-        Submit the pattern of things that are attached to the agent to complete a task.
-        Note: The area is cleared after a number of consecutive successful clear actions for the same target position.
+        Submit the pattern of things that are attached to the agent to
+            complete a task.
+        Note: The area is cleared after a number of consecutive
+              successful clear actions for the same target position.
         Note: The action consumes a fixed amount of energy.
-        
+
         parameters
         ----------
-        request_id: str 
+        request_id: str
             Id of the request-action from the server.
         x: int or str
             The relative x position of the target position.
@@ -320,16 +332,17 @@ class Agent(Server):
 
         self.last_action_move = ""
 
-    
     def accept(self, request_id, task):
         """
-        Submit the pattern of things that are attached to the agent to complete a task.
-        Note: The area is cleared after a number of consecutive successful clear actions for the same target position.
+        Submit the pattern of things that are attached to the agent to
+            complete a task.
+        Note: The area is cleared after a number of consecutive successful
+              clear actions for the same target position.
         Note: The action consumes a fixed amount of energy.
-        
+
         parameters
         ----------
-        request_id: str 
+        request_id: str
             Id of the request-action from the server.
         task: str
             The name of the task to accept.
@@ -368,16 +381,12 @@ class Agent(Server):
                 "p": list(p)
             }
         }
-        
         # Return the action.
         return action
 
 
-    
-
-
-
 if __name__ == "__main__":
-    agent = Agent(f"agentA0", "1", print_json=False)
-    agent.play()
-
+    a_list = []
+    for i in range(15):
+        a_list.append(Agent(f"agentA{i}", "1"))
+        a_list[i].start()
