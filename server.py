@@ -8,9 +8,9 @@ class Server(Thread):
     """
     Class used to communicate with the server
     """
-    def __init__(self, user, pw, name, print_json=False):
+    def __init__(self, user, pw, print_json=False):
         """
-        Store some information about the agent and the socket so we can 
+        Store some information about the agent and the socket so we can
         connect to the localhost.
 
         parameters
@@ -22,7 +22,7 @@ class Server(Thread):
         print_json: bool
             If the communication jsons should be printed.
         """
-        super().__init__(name=name)
+        super().__init__(name=user)
         self._user = user
         self._pw = pw
         self._print_json = print_json
@@ -65,14 +65,12 @@ class Server(Thread):
         else:
             print(self.name, ": Connection Failed")
 
-    
     def close_socket(self):
         """
         Disconnects the socket from the server.
         """
         if self.socket:
             self.socket.close()
-
 
     def send_request(self, request):
         """
@@ -90,7 +88,6 @@ class Server(Thread):
         # Send the request to the server.
         self.socket.sendall((json.dumps(request) + "\0").encode())
 
-    
     def receive_msg(self):
         """
         Waits for a message from the server and returns it.
@@ -106,7 +103,6 @@ class Server(Thread):
         else:
             time.sleep(0.1)
             return self.receive_msg()
-
 
     @staticmethod
     def _get_request_id(action_request):
