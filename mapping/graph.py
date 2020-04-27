@@ -239,6 +239,10 @@ class Graph(object):
             for loc in current_loc:
                 if loc not in previous_loc:
                     new_agents.append(loc)
+            
+        while self.current in new_agents:
+            new_agents.remove(self.current)
+
         return new_agents
 
     def add_neighbours(self, node):
