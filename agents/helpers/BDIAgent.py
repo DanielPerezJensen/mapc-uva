@@ -6,9 +6,7 @@ class BDIAgent():
         self.beliefs = {}
 
     def update_beliefs(self, msg):
-        percept = msg["content"]["percept"]
-
-        print(percept["things"])
+      pass
 
         # self.beliefs["things"] = listofthings
 
