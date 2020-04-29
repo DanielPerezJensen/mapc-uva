@@ -51,6 +51,11 @@ class Agent(Server):
         
         # Get the new direction
         new_loc  = self.dstar.move_to_goal()
+
+        # Check if path is possible or already at goal location
+        if not new_loc:
+            return None
+
         direction = self.graph.get_direction(new_loc)
 
         # Return the action
