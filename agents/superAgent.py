@@ -3,26 +3,26 @@ from .attacker import Attacker
 from .builder import Builder
 from .defender import Defender
 from .mapper import Mapper
-from .scout import Scout
+from .spy import Spy
 import json
 import time
 
 
-AGENTS = [Attacker, Builder, Defender, Mapper, Scout]
+AGENTS = [Attacker, Builder, Defender, Mapper, Spy]
 COLORS = ['\033[1;31m','\033[1;32m','\033[1;33m','\033[1;34m','\033[1;35m','\033[1;36m','\033[1;37m','\033[1;90m','\033[1;91m','\033[1;92m','\033[1;93m','\033[1;94m','\033[1;95m','\033[1;96m','\033[1;30m']
 END_COLOR = '\033[0;0m'
 
 class SuperAgent(*AGENTS, BDIAgent):
 
-    def __init__(self, user, pw, print_json=False, timer=False):
+    def __init__(self, user, pw, strategist, print_json=False, timer=False):
         super().__init__(user, pw, print_json)
         self._timer = timer
+        self.strategist = strategist
 
     def run(self):
         """
-        Function that (currently) moves north every iteration
+        Function that runs the agents.
         """
-
         while True:
             # Receive a message.
             msg = self.receive_msg()
@@ -38,14 +38,17 @@ class SuperAgent(*AGENTS, BDIAgent):
                     # self.update_beliefs(new_obstacle, new_emtpy, new_agents)
 
                     # TODO: Listen to strategist thread for role
+                    time.sleep(1)
+                    local_agents = self.strategist.potential_agents(self._user_id, (1, -1))
+                    print(f'{self._user_id} --> {local_agents}')
 
                     # TODO: Set role as chosen by strategist
 
-                    selected_agent = AGENTS[1] # Builder, example 
+                    selected_agent = AGENTS[3] # Builder, example 
 
                     # TODO: Reasoning according to selected role
                     
-                    action = selected_agent.get_action(self, new_obstacle, new_empty, new_agents) # example
+                    action = None#selected_agent.explore(self, new_obstacle, new_empty, new_agents) # example
 
                     if not action:
                         action = self.skip()

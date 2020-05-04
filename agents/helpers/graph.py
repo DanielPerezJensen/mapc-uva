@@ -243,7 +243,7 @@ class Graph(object):
         graph += f'\n- Number of nodes  : {len(self.nodes.keys())}\n'
         return graph
 
-    def update(self, msg, action_msg):
+    def update(self, msg, action_msg=None):
         """
         Update the graph given the information in the message. The function
         adds new nodes if necessary, updates information and return
@@ -301,7 +301,8 @@ class Graph(object):
             # Failsafe incase new node doesn't exist.
             self.current = self.current.directions[prev_direction]
 
-        self.next = self.current.get_direction(get_action_direction(action_msg))
+        if action_msg:
+            self.next = self.current.get_direction(get_action_direction(action_msg))
 
     def update_step(self, step):
         self.step = step
@@ -412,18 +413,33 @@ class Graph(object):
                     agents.append((node, thing))
         return agents
 
-    def get_local_nodes(self):
+    def get_local_nodes(self, offset=None):
         """
         Return the location of the nodes around the current node, within the
         vision of the agent.
         """
-        cx, cy = self.get_current().location
+        if offset:
+            cx, cy = offset
+        else:
+            cx, cy = self.get_current().location
         nodes = []
         for x in range(-5, 6):
             for y in range(-5, 6):
                 if abs(x) + abs(y) < 6:
                     nodes.append((x + cx, y + cy))
         return nodes
+
+    def get_local_agents(self, team='A'):
+        """
+        Return the location of the agents in the agent's local vision.
+        """
+        local_agents = []
+        for node in self.get_local_nodes(offset=(0,0)):
+            if node != (0,0):
+                for thing in self.nodes[node].get_things(step=self.step):
+                    if thing[0] == 'entity' and thing[1] == team:
+                        local_agents.append(node)                    
+        return local_agents
 
     def get_new_nodes(self, direction):
         """
