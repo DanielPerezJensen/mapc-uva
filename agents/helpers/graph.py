@@ -177,23 +177,44 @@ class Node(object):
         if isinstance(west, Node):
             self.directions['w'] = west
 
-    def _is_obstacle(self, step, agent_location):
+    def _is_obstacle(self):
         """
-        Determine if a node is an obstacle, e.g. obstacles, agents.
-
-        Arguments
+        Determine if a node is an obstacle block.
+        Parameters
         ---------
         step: int
             Current game step.
         agent_location: (int, int)
             The location of the agent itself.
         """
-        if self.terrain[0] in ['empty', 'goal']:
-            if agent_location == self.location:
-                return False
-            elif self.get_things(step) == []:
-                return False
-        return True
+        # check for obstacles
+        if self.terrain[0] == 'obstacle':
+            return True
+        
+        return False
+
+    def _is_thing(self, step, agent_location, things=['block', 'entity']):
+        """
+        Determine if a node is a given thing.
+        By default looking for blocks and entities.
+        Parameters
+        ---------
+        step: int
+            Current game step.
+        agent_location: (int, int)
+            The location of the agent itself.
+        things: list of str
+            List of things to include from {block, entity, dispenser, marker}.
+        """
+        if agent_location == self.location:
+            return False
+        # check for entities
+        things = self.get_things(step)
+        for thing in things:
+            if thing[0] in things:
+                return True
+
+        return False
 
 
 class Graph(object):
