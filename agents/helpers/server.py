@@ -3,6 +3,9 @@ import json
 import time
 from threading import Thread
 
+COLORS = ['\033[1;31m','\033[1;32m','\033[1;33m','\033[1;34m','\033[1;35m','\033[1;36m','\033[1;37m','\033[1;90m','\033[1;91m','\033[1;92m','\033[1;93m','\033[1;94m','\033[1;95m','\033[1;96m','\033[1;30m']
+END_COLOR = '\033[0;0m'
+
 
 class Server(Thread):
     """
@@ -25,6 +28,7 @@ class Server(Thread):
         """
         super().__init__(name=user)
         self._user = user
+        self._user_id = int((user[-2] if user[-2].isdigit() else "") + user[-1])
         self._pw = pw
         self._print_json = print_json
 
@@ -64,9 +68,9 @@ class Server(Thread):
         response = self.receive_msg()
 
         if response["content"]["result"] == "ok":
-            print(self.name, ": Connection Succesful")
+            print(f"{COLORS[self._user_id % 15]}{self.name:<10}{END_COLOR} connection succesful")
         else:
-            print(self.name, ": Connection Failed")
+            print(f"{COLORS[self._user_id % 15]}{self.name:<10}{END_COLOR} connection failed")
 
     def close_socket(self):
         """
@@ -85,6 +89,10 @@ class Server(Thread):
             The request to send to the server.
         """
         # Print the request if required.
+        if request['type'] == "action":
+            content = f"{request['content']['type']}" + (f" {request['content']['p']}" if list(request['content']['p']) else "")
+            print(f"{COLORS[self._user_id % 15]}{self.name:<10}{END_COLOR} {content:<50} step {request['content']['id']}")
+
         if self._print_json:
             print(request)
 
@@ -100,7 +108,8 @@ class Server(Thread):
         # In case a message is received, parse it into a dictionary.
         if len(msg) > 1:
             if self._print_json:
-                print(msg)
+                print(json.loads(msg))
+                # print(json.dumps(json.loads(msg), indent=2))
 
             return json.loads(msg)
         else:
@@ -117,3 +126,32 @@ class Server(Thread):
             The action-request of the server.
         """
         return action_request["content"]["id"]
+
+    @staticmethod
+    def _get_action_result(action_request):
+        """
+        Returns if the action last sent to the server has succeeded
+
+        parameters
+        ----------
+        action_request: dict
+            The action-request of the server.
+        """
+        if action_request["content"]["percept"]["lastAction"] != "no_action":
+            if action_request["content"]["percept"]["lastActionResult"] == "success":
+                return True
+            
+        return False
+    
+    @staticmethod
+    def _add_request_id(action, request_id):
+        """
+        Returns the action with the given request id.
+
+        parameters
+        ----------
+        action: dict
+            The action to be sent to the server.
+        """
+        action['content']['id'] = request_id
+        return action
