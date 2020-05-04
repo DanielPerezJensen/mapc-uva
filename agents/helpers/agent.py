@@ -1,5 +1,9 @@
-from .server import Server
-from .graph import Graph
+if __name__ == "__main__":
+    from server import Server
+    from graph import Graph
+else:
+    from .server import Server
+    from .graph import Graph
 from collections import deque
 from functools import partial
 import heapq
@@ -58,8 +62,13 @@ class Agent(Server):
 
         direction = self.graph.get_direction(new_loc)
 
-        # Return the action
-        return self.move(direction)
+        if self.graph.nodes[new_loc]._is_obstacle():
+            clear_pos_x = (new_loc[0] - self.graph.current.location[0]) * 2
+            clear_pos_y = (new_loc[1] - self.graph.current.location[1]) * 2
+            return self.clear(clear_pos_x, clear_pos_y)
+        else:
+            # Move to location
+            return self.move(direction)
 
     def quit_nav(self):
         """
@@ -223,8 +232,7 @@ class Agent(Server):
 
     def clear(self, x, y):
         """
-        Submit the pattern of things that are attached to the agent to
-            complete a task.
+        Prepare to clear an area (a target position and the 4 adjacent cells).
         Note: The area is cleared after a number of consecutive
               successful clear actions for the same target position.
         Note: The action consumes a fixed amount of energy.
@@ -329,12 +337,15 @@ class DStarLite(object):
         to_node: tuple
             x and y coordinate of second node
         """
-        if from_node in self.graph.nodes and self.graph.nodes[from_node]._is_obstacle(self.graph.step, self.graph.current.location):
-                return float('inf')
+        if from_node in self.graph.nodes and self.graph.nodes[from_node]._is_thing(self.graph.step, self.graph.current.location):
+            return float('inf')
+
+        if to_node in self.graph.nodes and self.graph.nodes[to_node]._is_thing(self.graph.step, self.graph.current.location):
+            return float('inf')
         
-        if to_node in self.graph.nodes and self.graph.nodes[to_node]._is_obstacle(self.graph.step, self.graph.current.location): 
-                return float('inf')
-        
+        if to_node in self.graph.nodes and self.graph.nodes[to_node]._is_obstacle():
+            return 3
+
         return 1
 
     def neighbors(self, id):
@@ -441,7 +452,7 @@ class DStarLite(object):
             
             self.update_nodes({node for wallnode in new_obs
                                 for node in self.neighbors(wallnode)
-                                if (node not in self.graph.nodes or not self.graph.nodes[node]._is_obstacle(self.graph.step, self.graph.current.location))})
+                                if (node not in self.graph.nodes or not self.graph.nodes[node]._is_thing(self.graph.step, self.graph.current.location))})
             self.compute_shortest_path()
         
 
@@ -474,5 +485,5 @@ class PriorityQueue:
 if __name__ == "__main__":
     agent = Agent("agentA0", "1", True)
     
-    while True:
-        msg = agent.receive_msg()
+    # while True:
+    msg = agent.receive_msg()
