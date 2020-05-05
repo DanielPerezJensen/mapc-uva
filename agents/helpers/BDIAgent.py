@@ -1,14 +1,36 @@
 from collections import namedtuple
+from collections import deque
+
 
 
 class BDIAgent():
     def __init__(self):
         self.beliefs = {}
+        self.intentions = []
 
     def update_beliefs(self, msg):
-      pass
+        pass
 
         # self.beliefs["things"] = listofthings
+
+    def add_intention(self, intention):
+        self.intentions.append(intention)
+
+    def drop_intention(self):
+        for intention in self.intentions:
+            # drop impossible intentions
+            pass
+
+    def execute_intentions(self):
+        # execute first intention
+        intention = self.intentions[0]
+        # pop intention if succesful
+        if intention:
+            # pop
+            pass
+        else:
+            self.drop_intention()
+
 
 
 """
