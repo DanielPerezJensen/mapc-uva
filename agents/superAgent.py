@@ -9,7 +9,9 @@ import time
 
 
 AGENTS = [Attacker, Builder, Defender, Mapper, Spy]
-COLORS = ['\033[1;31m','\033[1;32m','\033[1;33m','\033[1;34m','\033[1;35m','\033[1;36m','\033[1;37m','\033[1;90m','\033[1;91m','\033[1;92m','\033[1;93m','\033[1;94m','\033[1;95m','\033[1;96m','\033[1;30m']
+COLORS = ['\033[1;31m','\033[1;32m','\033[1;33m','\033[1;34m','\033[1;35m',
+          '\033[1;36m','\033[1;37m','\033[1;90m','\033[1;91m','\033[1;92m',
+          '\033[1;93m','\033[1;94m','\033[1;95m','\033[1;96m','\033[1;30m']
 END_COLOR = '\033[0;0m'
 
 class SuperAgent(*AGENTS, BDIAgent):
@@ -38,8 +40,8 @@ class SuperAgent(*AGENTS, BDIAgent):
                     # self.update_beliefs(new_obstacle, new_emtpy, new_agents)
 
                     # TODO: Listen to strategist thread for role
-                    time.sleep(1)
-                    local_agents = self.strategist.potential_agents(self._user_id, (1, -1))
+                    #time.sleep(1)
+                    local_agents = self.strategist.potential_agents(self._user_id)
                     print(f'{self._user_id} --> {local_agents}')
 
                     # TODO: Set role as chosen by strategist
@@ -48,7 +50,8 @@ class SuperAgent(*AGENTS, BDIAgent):
 
                     # TODO: Reasoning according to selected role
                     
-                    action = None#selected_agent.explore(self, new_obstacle, new_empty, new_agents) # example
+                    action = selected_agent.explore(self, new_obstacle, 
+                                                    new_empty, new_agents)
 
                     if not action:
                         action = self.skip()

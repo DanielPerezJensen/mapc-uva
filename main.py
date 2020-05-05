@@ -12,5 +12,3 @@ for i in range(n_agents):
     a_list[i].start()
 
 strategist.insert_agents(a_list)
-for agent in a_list:
-    agent.run()
