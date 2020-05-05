@@ -54,6 +54,10 @@ class Strategist(object):
         return finalists
 
     def potential_agents(self, agent_id, location=None):
+        """
+        Create a lsit of potential agent id's on a certain location.
+        If no location is given all locations where agents are will be calculated.
+        """
         if location:
             potential = []
             reverse_location = (-location[0], -location[1])
@@ -70,7 +74,6 @@ class Strategist(object):
         else:
             potential = {}
             local_agent = self.agents[agent_id].graph.get_local_agents()
-            print(local_agent)
             reverse_local_agent = [(-x, -y) for (x, y) in local_agent]
 
             for agent in self.agents.values():

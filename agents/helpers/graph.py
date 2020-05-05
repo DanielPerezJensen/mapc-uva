@@ -14,7 +14,7 @@ class Node(object):
 
         Arguments
         ---------
-        location: (int, int)
+        location: tuple(int, int)
             A tuple containing the x, y coordinate of the node relative to the
             graph's initial node.
         terrain: str
@@ -84,6 +84,9 @@ class Node(object):
         return node+'\n'
 
     def get_location(self):
+        """
+        Return the location of the node as a tuple (int, int).
+        """
         return self.location
 
     def set_location(self, location):
@@ -92,11 +95,16 @@ class Node(object):
 
         Arguments
         ---------
-        location: (int, int)
+        location: tuple(int, int)
         """
         self.location = location
 
     def get_terrain(self):
+        """
+        Return the terrain of a node as a tuple (str, int), where the first
+        element is the type of terrain and the second is the step in which
+        the terrain was changed.
+        """
         return self.terrain
 
     def set_terrain(self, terrain, step):
@@ -104,14 +112,18 @@ class Node(object):
 
     def get_things(self, step=-1):
         """
-        Return the things on a specific step.
+        Return the all the things in a node on a specific step.
+        If a step is given, return a list of tuples where the first element of
+        the tuple is the type of thing and the second is a detail of the thing.
+
+        If no step is given, all things from every step are returned as a list
+        of tuples. Where the first element is the step and the second is the
+        list of things from that step.
 
         Arguments
         ---------
         step: int
-            If step > 0, return list with things in that step
-            (None if step doesn't exist). If no step is specified,
-            return things dict as sorted list with (step, things) elements.
+            The step from which the information will be returned. Default is -1.
         """
         if step >= 0:
             if step in self.things.keys():
@@ -123,7 +135,8 @@ class Node(object):
 
     def add_things(self, objects, step):
         """
-        Add things to the node at a specific step and remove duplicates.
+        Add things to the node at a specific step and store it in a list.
+        It also removes any duplicates.
 
         Arguments
         ---------
@@ -245,7 +258,8 @@ class Graph(object):
         """
         Update the graph given the information in the message. The function
         adds new nodes if necessary, updates information and return
-        lists of new obstacles, new empty space and new agents.
+        lists of newly added obstacles, spaces that used to be obstacles but
+        are now empty and new agents.
 
         Arguments
         ---------
@@ -285,14 +299,11 @@ class Graph(object):
     def update_current(self, msg):
         """
         Update the agent's current location based on the previous action.
-        Update the agent's next node based on the action it's about to do.
 
         Arguments
         ---------
         msg: dict
             The request-action message from the server.
-        action_msg: dict
-            The action message for the server.
         """
         if agent_moved(msg):
             prev_direction = msg['content']['percept']['lastActionParams'][0]
@@ -300,11 +311,16 @@ class Graph(object):
             self.current = self.current.directions[prev_direction]
 
     def update_step(self, step):
+        """
+        Update the step. The graph contains the current step so that it can be
+        used by graph functions.
+        """
         self.step = step
 
     def add_neighbours(self, node):
         """
-        Connect node to neighbouring nodes if necessary.
+        Connect node to neighbouring nodes if it doesn't already have a node in
+        that direction.
         """
         x, y = node.location
         if (x, y-1) in self.nodes and node.directions['n'] is None:
@@ -327,6 +343,11 @@ class Graph(object):
         """
         Process the percept information from the message and create
         a dictionary.
+        Return a dictionary where, the keys are the coordinates of the nodes
+        where there is either a thing or a non-empty terrain type. The values
+        are a nested dictionary, where the keys are 'terrain' (containing the
+        type of terrain) and 'things' which contains a list of
+        tuples (thing type, thing detail).
 
         Arguments
         ---------
@@ -363,16 +384,12 @@ class Graph(object):
         """
         return self.current
 
-    def get_next(self):
-        """
-        Return the node of the agent's next location.
-        """
-        return self.next
-
     def get_new_agents(self, vision):
         """
         Create a list with the locations on which there are currently now agent
         but not the previous step.
+
+        Returns a list of the coordinates.
 
         Arguments
         ---------
@@ -393,11 +410,11 @@ class Graph(object):
 
     def get_agents(self, step=0, team='A'):
         """
-        Get the agents and location on a certain from a specific team.
+        Get the agents and location on a certain step from a specific team.
 
         Arguments:
         step: int
-            The step from which the agents are gathered.
+            The step from which the agents are collected.
         team: str
             The team can be either A or B.
         """
@@ -410,8 +427,15 @@ class Graph(object):
 
     def get_local_nodes(self, offset=None):
         """
-        Return the location of the nodes around the current node, within the
-        vision of the agent.
+        Return the location of the nodes around within the agent's local vision.
+        By default the coordinates are create with respect to the agent's
+        current location. This can be changed by changing the offset.
+        Returns a list of tuple coordinates.
+
+        Arguments
+        ---------
+        offset: tuple(int, int)
+
         """
         if offset:
             cx, cy = offset
@@ -426,7 +450,15 @@ class Graph(object):
 
     def get_local_agents(self, team='A'):
         """
-        Return the location of the agents in the agent's local vision.
+        Return the location of the agents from a certain team within 
+        the agent's own local vision.
+
+        Return a list of tuple coordinates.
+
+        Arguments
+        ---------
+        team: str
+            The team's name.
         """
         local_agents = []
         cx, cy = self.get_current().location
@@ -441,8 +473,9 @@ class Graph(object):
     def get_local_things(self):
         """
         Return the location and things of the nodes in the agent's local vision.
-        The returned item is a list of tuples. The tuples contain the coordinates
-        of the thing relative to the agent and the things themselves, respectively.
+        The returned item is a list of tuples. The tuples contain the 
+        coordinates of the thing relative to the agent and the things 
+        themselves, respectively.
         """
         local_things = []
         cx, cy = self.get_current().location
@@ -454,6 +487,8 @@ class Graph(object):
     def get_new_nodes(self, direction):
         """
         Get coordinates of the new nodes relative to the root node.
+
+        Return a list of tuple coordinates.
 
         Arguments
         ---------
@@ -568,8 +603,6 @@ def merge_graphs(g1, g2, offset):
 
     # g2 changes its current and next node accordingly
     g2.current = g1.nodes[(rx + g2_x, ry + g2_y)]
-    g2_x, g2_y = g2.get_next().location
-    g2.next = g1.nodes[(rx + g2_x, ry + g2_y)]
     g2_x, g2_y = g2.root.location
     g2.root = g1.nodes[(rx + g2_x, ry + g2_y)]
 
@@ -689,14 +722,10 @@ if __name__ == '__main__':
     graph1 = Graph()
     graph1.update(agent_0_step_0)
     graph1.update(agent_0_step_1)
+    print(graph1.nodes[(0, 0)].get_things(0))
 
     graph2 = Graph()
     graph2.update(agent_2_step_0)
     graph2.update(agent_2_step_1)
 
     merge_graphs(graph1, graph2, (1, 2))
-
-    print(graph1)
-    print(graph1.nodes[(1, 0)])
-    print(graph2)
-    print(graph2.nodes[(1, 0)])
