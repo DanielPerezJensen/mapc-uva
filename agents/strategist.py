@@ -70,6 +70,7 @@ class Strategist(object):
         else:
             potential = {}
             local_agent = self.agents[agent_id].graph.get_local_agents()
+            print(local_agent)
             reverse_local_agent = [(-x, -y) for (x, y) in local_agent]
 
             for agent in self.agents.values():

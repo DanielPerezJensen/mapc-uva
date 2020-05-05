@@ -219,7 +219,6 @@ class Graph(object):
 
         self.root = self.nodes[(0, 0)]
         self.current = self.root
-        self.next = self.root
 
         for node in self.nodes.values():
             x, y = node.location
@@ -239,11 +238,10 @@ class Graph(object):
         graph = f'Graph object\n- Current step     : {self.step}'
         graph += f'\n- Root location    : {self.root.location}'
         graph += f'\n- Current location : {self.current.location}'
-        graph += f'\n- Next location    : {self.next.location}'
         graph += f'\n- Number of nodes  : {len(self.nodes.keys())}\n'
         return graph
 
-    def update(self, msg, action_msg=None):
+    def update(self, msg):
         """
         Update the graph given the information in the message. The function
         adds new nodes if necessary, updates information and return
@@ -254,7 +252,7 @@ class Graph(object):
         msg: dict
             The request-action message from the server.
         """
-        self.update_locations(msg, action_msg)
+        self.update_current(msg)
         self.update_step(msg['content']['step'])
         if agent_moved(msg):
             for new_node in self.get_new_nodes(msg['content']['percept']
@@ -284,7 +282,7 @@ class Graph(object):
 
         return new_obstacles, new_empty, self.get_new_agents(vision)
 
-    def update_locations(self, msg, action_msg):
+    def update_current(self, msg):
         """
         Update the agent's current location based on the previous action.
         Update the agent's next node based on the action it's about to do.
@@ -300,9 +298,6 @@ class Graph(object):
             prev_direction = msg['content']['percept']['lastActionParams'][0]
             # Failsafe incase new node doesn't exist.
             self.current = self.current.directions[prev_direction]
-
-        if action_msg:
-            self.next = self.current.get_direction(get_action_direction(action_msg))
 
     def update_step(self, step):
         self.step = step
@@ -434,12 +429,27 @@ class Graph(object):
         Return the location of the agents in the agent's local vision.
         """
         local_agents = []
-        for node in self.get_local_nodes(offset=(0,0)):
-            if node != (0,0):
-                for thing in self.nodes[node].get_things(step=self.step):
+        cx, cy = self.get_current().location
+        for node in self.get_local_nodes(offset=(0, 0)):
+            if node != (0, 0):
+                real_node = (node[0] + cx, node[1] + cy)
+                for thing in self.nodes[real_node].get_things(step=self.step):
                     if thing[0] == 'entity' and thing[1] == team:
                         local_agents.append(node)                    
         return local_agents
+
+    def get_local_things(self):
+        """
+        Return the location and things of the nodes in the agent's local vision.
+        The returned item is a list of tuples. The tuples contain the coordinates
+        of the thing relative to the agent and the things themselves, respectively.
+        """
+        local_things = []
+        cx, cy = self.get_current().location
+        for node in self.get_local_nodes(offset=(0, 0)):
+            real_node = (node[0] + cx, node[1] + cy)
+            local_things.append((node, self.nodes[real_node].get_things(step=self.step)))
+        return local_things
 
     def get_new_nodes(self, direction):
         """
@@ -495,21 +505,6 @@ class Graph(object):
             return 'w'
         else:
             return ''
-
-
-def get_action_direction(action_msg):
-    """
-    Return the direction for the given move action.
-
-    Arguments
-    ---------
-    action_msg: dict
-        The action message for the server.
-    """
-    if action_msg and action_msg['content']['type'] == 'move':
-        return action_msg['content']['p'][0]
-    else:
-        return ''
 
 
 def agent_moved(msg):
@@ -691,33 +686,13 @@ if __name__ == '__main__':
                 "energy":300},\
             "deadline":1587837763855}}')
 
-    action_msg_n = {
-        "type":
-            "action",
-        "content": {
-            "id": 0,
-            "type": 'move',
-            "p": ['n']
-            }
-        }
-
-    action_msg_s = {
-        "type":
-            "action",
-        "content": {
-            "id": 0,
-            "type": 'move',
-            "p": ['s']
-            }
-        }
-
     graph1 = Graph()
-    graph1.update(agent_0_step_0, action_msg_n)
-    graph1.update(agent_0_step_1, action_msg_n)
+    graph1.update(agent_0_step_0)
+    graph1.update(agent_0_step_1)
 
     graph2 = Graph()
-    graph2.update(agent_2_step_0, action_msg_s)
-    graph2.update(agent_2_step_1, action_msg_s)
+    graph2.update(agent_2_step_0)
+    graph2.update(agent_2_step_1)
 
     merge_graphs(graph1, graph2, (1, 2))
 

@@ -40,9 +40,10 @@ class SuperAgent(*AGENTS, BDIAgent):
                     # self.update_beliefs(new_obstacle, new_emtpy, new_agents)
 
                     # TODO: Listen to strategist thread for role
-                    #time.sleep(1)
-                    local_agents = self.strategist.potential_agents(self._user_id)
-                    print(f'{self._user_id} --> {local_agents}')
+                    time.sleep(1)
+                    if self._user_id == 0:
+                        local_agents = self.strategist.potential_agents(self._user_id)
+                        print(f'{self._user_id} --> {local_agents}')
 
                     # TODO: Set role as chosen by strategist
 
