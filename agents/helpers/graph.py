@@ -264,7 +264,7 @@ class Graph(object):
         graph += f'\n- Number of nodes  : {len(self.nodes.keys())}\n'
         return graph
 
-    def update(self, msg, action_msg):
+    def update(self, msg):
         """
         Update the graph given the information in the message. The function
         adds new nodes if necessary, updates information and return
@@ -275,9 +275,13 @@ class Graph(object):
         msg: dict
             The request-action message from the server.
         """
-        self.update_locations(msg, action_msg)
         self.update_step(msg['content']['step'])
         if agent_moved(msg):
+            # update location
+            prev_direction = msg['content']['percept']['lastActionParams'][0]
+            # Failsafe incase new node doesn't exist.
+            self.current = self.current.directions[prev_direction]
+
             for new_node in self.get_new_nodes(msg['content']['percept']
                                                ['lastActionParams'][0]):
                 if new_node in self.nodes:
@@ -304,25 +308,6 @@ class Graph(object):
                 self.nodes[node].add_things(vision[node]['things'], step)
 
         return new_obstacles, new_empty, self.get_new_agents(vision)
-
-    def update_locations(self, msg, action_msg):
-        """
-        Update the agent's current location based on the previous action.
-        Update the agent's next node based on the action it's about to do.
-
-        Arguments
-        ---------
-        msg: dict
-            The request-action message from the server.
-        action_msg: dict
-            The action message for the server.
-        """
-        if agent_moved(msg):
-            prev_direction = msg['content']['percept']['lastActionParams'][0]
-            # Failsafe incase new node doesn't exist.
-            self.current = self.current.directions[prev_direction]
-
-        self.next = self.current.get_direction(get_action_direction(action_msg))
 
     def update_step(self, step):
         self.step = step
@@ -696,33 +681,13 @@ if __name__ == '__main__':
                 "energy":300},\
             "deadline":1587837763855}}')
 
-    action_msg_n = {
-        "type":
-            "action",
-        "content": {
-            "id": 0,
-            "type": 'move',
-            "p": ['n']
-            }
-        }
-
-    action_msg_s = {
-        "type":
-            "action",
-        "content": {
-            "id": 0,
-            "type": 'move',
-            "p": ['s']
-            }
-        }
-
     graph1 = Graph()
-    graph1.update(agent_0_step_0, action_msg_n)
-    graph1.update(agent_0_step_1, action_msg_n)
+    graph1.update(agent_0_step_0)
+    graph1.update(agent_0_step_1)
 
     graph2 = Graph()
-    graph2.update(agent_2_step_0, action_msg_s)
-    graph2.update(agent_2_step_1, action_msg_s)
+    graph2.update(agent_2_step_0)
+    graph2.update(agent_2_step_1)
 
     merge_graphs(graph1, graph2, (1, 2))
 

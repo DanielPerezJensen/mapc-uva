@@ -3,12 +3,12 @@ from .attacker import Attacker
 from .builder import Builder
 from .defender import Defender
 from .mapper import Mapper
-from .scout import Scout
+from .spy import Spy
 import json
 import time
 
 
-AGENTS = [Attacker, Builder, Defender, Mapper, Scout]
+AGENTS = [Attacker, Builder, Defender, Mapper, Spy]
 COLORS = ['\033[1;31m','\033[1;32m','\033[1;33m','\033[1;34m','\033[1;35m','\033[1;36m','\033[1;37m','\033[1;90m','\033[1;91m','\033[1;92m','\033[1;93m','\033[1;94m','\033[1;95m','\033[1;96m','\033[1;30m']
 END_COLOR = '\033[0;0m'
 
