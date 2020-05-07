@@ -206,14 +206,15 @@ class Node(object):
         things: list of str
             List of things to include from {block, entity, dispenser, marker}.
         """
+        
         if agent_location == self.location:
             return False
+
         # check for entities
-        things = self.get_things(step)
-        for thing in things:
+        loc_things = self.get_things(step)
+        for thing in loc_things:
             if thing[0] in things:
                 return True
-
         return False
 
 
