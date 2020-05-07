@@ -12,7 +12,7 @@ class Mapper(Agent):
         else:
             pass # Visit the areas that haven't been visited in a while
 
-    def explore(self, new_obstacle, new_empty, new_agents, 
+    def explore(self, agent_id, new_obstacle, new_empty, new_agents, 
             options=['single', 'random', 'east']):
         self.options = options
         if self.options[0] == 'multi':
@@ -23,28 +23,28 @@ class Mapper(Agent):
             """
             teammate = "A2"#agent_broadcast()
             if teammate:
-                action = self.multi_agent_explore(agent_id=teammate)
+                action = self.multi_agent_explore(agent_id, teammate=teammate)
                 return action
     
-        action = self.single_agent_explore(new_obstacle + new_agents)
+        action = self.single_agent_explore(agent_id, new_obstacle + new_agents)
         return action
 
-    def single_agent_explore(self, new_obs):
+    def single_agent_explore(self, agent_id, new_obs):
         """
         Different mode of single agent exploration.
         Serpentine and random will both use pattern recognition to determine
         if the agent has looped the map.
         """
         if self.options[1] == 'random':
-            return self.single_agent_random(new_obs)
+            return self.single_agent_random(agent_id, new_obs)
         elif self.options[1] == 'serpentine':
-            return self.single_agent_zig_zag(new_obs)
+            return self.single_agent_zig_zag(agent_id, new_obs)
         elif self.options[1] == 'tghm':
             return self.single_agent_tghm()
         else:
             return None
 
-    def single_agent_random(self, new_obs, min_max=range(5, 15)):
+    def single_agent_random(self, agent_id, new_obs, min_max=range(5, 15)):
         """
         Explore the world by going to random locations. A random location is
         chosen as goal. If the agent reaches the goal location or it is not
@@ -61,15 +61,17 @@ class Mapper(Agent):
         if not hasattr(self, 'r_goal'):
             self.r_goal = [random.choice(r), random.choice(r)]
 
-        action = self.nav_to((self.r_goal[0], self.r_goal[1]), new_obs)
+        action = self.nav_to((self.r_goal[0], self.r_goal[1]), 
+                             agent_id, new_obs)
         if not action:
             self.r_goal[0] += random.choice(r)
             self.r_goal[1] += random.choice(r)
-            action = self.nav_to((self.r_goal[0], self.r_goal[1]), new_obs)
+            action = self.nav_to((self.r_goal[0], self.r_goal[1]), 
+                                 agent_id, new_obs)
 
         return action
 
-    def single_agent_zig_zag(self, new_obs, path_length=15):
+    def single_agent_zig_zag(self, agent_id, new_obs, path_length=15):
         """
         Use a zig-zag pattern to explore the environment.
 
@@ -89,7 +91,8 @@ class Mapper(Agent):
             self.prev_zigzag = None
         
         if self.zigzag == 'south':
-            action = self.nav_to((self.z_goal[0], self.z_goal[1] + path_length), new_obs)
+            action = self.nav_to((self.z_goal[0], self.z_goal[1] + path_length),
+                                 agent_id, new_obs)
             if not action:
                 self.z_goal = list(self.graph.get_current().location)
                 self.prev_zigzag = self.zigzag
@@ -97,7 +100,8 @@ class Mapper(Agent):
                 print(f'{self._user}: Changing direction to {self.zigzag}')
 
         if self.zigzag == 'north':
-            action = self.nav_to((self.z_goal[0], self.z_goal[1] - path_length), new_obs)
+            action = self.nav_to((self.z_goal[0], self.z_goal[1] - path_length),
+                                 agent_id, new_obs)
             if not action:
                 self.z_goal = list(self.graph.get_current().location)
                 self.prev_zigzag = self.zigzag
@@ -106,9 +110,11 @@ class Mapper(Agent):
 
         if self.zigzag == self.options[2]:
             if self.options[2] == 'east':
-                action = self.nav_to((self.z_goal[0] + 11, self.z_goal[1]), new_obs)
+                action = self.nav_to((self.z_goal[0] + 11, self.z_goal[1]),
+                                     agent_id, new_obs)
             else:
-                action = self.nav_to((self.z_goal[0] - 11, self.z_goal[1]), new_obs)
+                action = self.nav_to((self.z_goal[0] - 11, self.z_goal[1]),
+                                      agent_id, new_obs)
             if not action:
                 self.z_goal = list(self.graph.get_current().location)
                 if self.prev_zigzag == 'north':
@@ -140,7 +146,7 @@ class Mapper(Agent):
         """
         return False
 
-    def multi_agent_explore(self, agent_id):
+    def multi_agent_explore(self, agent_id, teammate):
         """
         1) Determine which agent moves in which direction
         2) Both start doing the zig-zag exploration

@@ -3,6 +3,7 @@ from .graph import Graph
 from collections import deque
 from functools import partial
 import heapq
+from agents.strategist import Strategist
 
 class Agent(Server):
     """
@@ -24,10 +25,9 @@ class Agent(Server):
         """
         super().__init__(user, pw, print_json)
         self.last_action_move = None
-        self.graph = Graph()
         self.dstar = None
 
-    def nav_to(self, goal, new_obs=[]):
+    def nav_to(self, goal, agent_id, new_obs=[]):
         """
         Navigate to coordinates in the agents local reference frame.
         The first call to nav_to does not require new_obs.
@@ -42,12 +42,12 @@ class Agent(Server):
         Returns the action.
         If at goal location or no path is possible, returns None.
         """
-
+        graph = self.strategist.get_graph(agent_id)
         # Initialize or update
         if not self.dstar or self.dstar.goal != goal:
-            self.dstar = DStarLite(self.graph, goal)
+            self.dstar = DStarLite(graph, goal, agent_id)
         else:
-            self.dstar.update(self.graph, new_obs)
+            self.dstar.update(graph, new_obs)
         
         # Get the new direction
         new_loc  = self.dstar.move_to_goal()
@@ -56,7 +56,7 @@ class Agent(Server):
         if not new_loc:
             return None
 
-        direction = self.graph.get_direction(new_loc)
+        direction = graph.get_direction(agent_id, new_loc)
 
         # Return the action
         return self.move(direction)
@@ -288,7 +288,7 @@ class Agent(Server):
 
 
 class DStarLite(object):
-    def __init__(self, graph, goal):
+    def __init__(self, graph, goal, agent_id):
         """
         Find the path to the goal location from the current position
 
@@ -309,7 +309,8 @@ class DStarLite(object):
         self.G_VALS = {}
         self.RHS_VALS = {}
         self.Km = 0
-        self.position = graph.current.location
+        self.agent_id = agent_id
+        self.position = graph.get_current(agent_id).location
         self.goal = goal
         self.queue = PriorityQueue()
         self.queue.put(self.goal, self.calculate_key(self.goal))
@@ -329,10 +330,9 @@ class DStarLite(object):
         to_node: tuple
             x and y coordinate of second node
         """
-        if from_node in self.graph.nodes and self.graph.nodes[from_node]._is_obstacle(self.graph.step, self.graph.current.location):
+        if from_node in self.graph.nodes and self.graph.nodes[from_node]._is_obstacle(self.graph.step, self.graph.get_current(self.agent_id).location):
                 return float('inf')
-        
-        if to_node in self.graph.nodes and self.graph.nodes[to_node]._is_obstacle(self.graph.step, self.graph.current.location): 
+        if to_node in self.graph.nodes and self.graph.nodes[to_node]._is_obstacle(self.graph.step, self.graph.get_current(self.agent_id).location): 
                 return float('inf')
         
         return 1
@@ -386,7 +386,9 @@ class DStarLite(object):
 
     def compute_shortest_path(self):
         last_nodes = deque(maxlen=10)
-        while len(self.queue.elements) and (self.queue.first_key() < self.calculate_key(self.position) or self.rhs(self.position) != self.g(self.position)):
+        while len(self.queue.elements) and\
+                (self.queue.first_key() < self.calculate_key(self.position) or\
+                self.rhs(self.position) != self.g(self.position)):
             k_old = self.queue.first_key()
             node = self.queue.pop()
             last_nodes.append(node)
@@ -413,7 +415,7 @@ class DStarLite(object):
             if self.g(self.position) == float('inf'):
                 return None
 
-            self.last_node = self.graph.current.location
+            self.last_node = self.graph.get_current(self.agent_id).location
 
             # return the next step to be taken
             return self.lowest_cost_neighbour(self.position)
@@ -433,7 +435,7 @@ class DStarLite(object):
         """        
         # Update observations
         self.graph = graph
-        self.position = graph.current.location
+        self.position = graph.get_current(self.agent_id).location
         
         # Update the path if there are new observations
         if new_obs:
@@ -441,7 +443,9 @@ class DStarLite(object):
             
             self.update_nodes({node for wallnode in new_obs
                                 for node in self.neighbors(wallnode)
-                                if (node not in self.graph.nodes or not self.graph.nodes[node]._is_obstacle(self.graph.step, self.graph.current.location))})
+                                if (node not in self.graph.nodes or not\
+                                    self.graph.nodes[node]._is_obstacle(self.graph.step, 
+                                    self.graph.get_current(self.agent_id).location))})
             self.compute_shortest_path()
         
 

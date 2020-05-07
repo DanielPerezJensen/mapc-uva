@@ -34,15 +34,20 @@ class SuperAgent(*AGENTS, BDIAgent):
                 if msg["type"] == "request-action":
                     # Get the request id
                     request_id = self._get_request_id(msg)
-
+                    agent_id = self._user_id
                     # Update beliefs
-                    new_obstacle, new_empty, new_agents = self.graph.update(msg)
+                    new_obstacle, new_empty, new_agents = \
+                        self.strategist.get_graph(agent_id).update(msg, agent_id)
                     # self.update_beliefs(new_obstacle, new_emtpy, new_agents)
 
                     # TODO: Listen to strategist thread for role
                     time.sleep(1)
-                    local_agents = self.strategist.potential_agents(self._user_id)
-                    print(f'{self._user_id} --> {local_agents}')
+                    if msg['content']['step'] > 0:
+                        local_agents = self.strategist.potential_agents(agent_id)
+                        #print(f'{agent_id} --> {local_agents}')
+                        self.strategist.merge_agents(agent_id, local_agents)
+                        #print(f'AgentA{agent_id} is paired with: {self.strategist.get_graph_pairs(agent_id)}')
+                        print(self.strategist.get_all_pairs())
 
                     # TODO: Set role as chosen by strategist
 
@@ -50,7 +55,7 @@ class SuperAgent(*AGENTS, BDIAgent):
 
                     # TODO: Reasoning according to selected role
                     
-                    action = selected_agent.explore(self, new_obstacle, 
+                    action = selected_agent.explore(self, agent_id, new_obstacle, 
                                                     new_empty, new_agents)
 
                     if not action:

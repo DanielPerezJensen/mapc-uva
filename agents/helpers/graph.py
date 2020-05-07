@@ -214,13 +214,13 @@ class Graph(object):
     Create a graph used by the agents to help naviagate and store information
     about the environment.
     """
-    def __init__(self):
+    def __init__(self, agent_id):
         """
         Initialise the graph and create a dictionary to store the nodes based
         on the coordinates of the agents initial position (will acts as
         the (0, 0) coordinate) and add the neighbouring nodes to each node.
-        The graph also saves the current step, current
-        node and the start node (0, 0).
+        The graph also saves the current step, current node and the 
+        start node (0, 0).
         """
         self.nodes = {}
         self.step = 0
@@ -230,8 +230,7 @@ class Graph(object):
                 if abs(x) + abs(y) < 6:
                     self.nodes[(x, y)] = Node((x, y))
 
-        self.root = self.nodes[(0, 0)]
-        self.current = self.root
+        self.current = {agent_id: self.nodes[(0, 0)]}
 
         for node in self.nodes.values():
             x, y = node.location
@@ -249,12 +248,17 @@ class Graph(object):
         Convert the information from a graph into a clear style to be printed.
         """
         graph = f'Graph object\n- Current step     : {self.step}'
-        graph += f'\n- Root location    : {self.root.location}'
-        graph += f'\n- Current location : {self.current.location}'
+        graph += f'\n- Current location :'
+        for i, agent in enumerate(self.current):
+            if i:
+                graph += f'\n{" "*20} Agent{agent} --> ' + \
+                         f'{self.current[agent].location}'
+            else:
+                graph += f' Agent{agent} --> {self.current[agent].location}'
         graph += f'\n- Number of nodes  : {len(self.nodes.keys())}\n'
         return graph
 
-    def update(self, msg):
+    def update(self, msg, agent_id):
         """
         Update the graph given the information in the message. The function
         adds new nodes if necessary, updates information and return
@@ -265,12 +269,14 @@ class Graph(object):
         ---------
         msg: dict
             The request-action message from the server.
+        agent_id: int
+            The id of the agent. Used to know which nodes and current node
+            need to be changed.
         """
-        self.update_current(msg)
+        self.update_current(msg, agent_id)
         self.update_step(msg['content']['step'])
         if agent_moved(msg):
-            for new_node in self.get_new_nodes(msg['content']['percept']
-                                               ['lastActionParams'][0]):
+            for new_node in self.get_new_nodes(msg, agent_id):
                 if new_node in self.nodes:
                     self.add_neighbours(self.nodes[new_node])
                 else:
@@ -279,8 +285,8 @@ class Graph(object):
 
         new_obstacles, new_empty = [], []
         step = self.get_step()
-        vision = self.get_vision(msg)
-        for node in self.get_local_nodes():
+        vision = self.get_vision(msg, agent_id)
+        for node in self.get_local_nodes(agent_id):
             if self.nodes[node].get_terrain()[0] == 'obstacle':
                 if node not in vision or vision[node]['terrain'] == 'empty':
                     self.nodes[node].set_terrain('empty', step)
@@ -294,9 +300,9 @@ class Graph(object):
                 self.nodes[node].set_terrain(vision[node]['terrain'], step)
                 self.nodes[node].add_things(vision[node]['things'], step)
 
-        return new_obstacles, new_empty, self.get_new_agents(vision)
+        return new_obstacles, new_empty, self.get_new_agents(vision, agent_id)
 
-    def update_current(self, msg):
+    def update_current(self, msg, agent_id):
         """
         Update the agent's current location based on the previous action.
 
@@ -308,7 +314,7 @@ class Graph(object):
         if agent_moved(msg):
             prev_direction = msg['content']['percept']['lastActionParams'][0]
             # Failsafe incase new node doesn't exist.
-            self.current = self.current.directions[prev_direction]
+            self.current[agent_id] = self.current[agent_id].directions[prev_direction]
 
     def update_step(self, step):
         """
@@ -339,7 +345,7 @@ class Graph(object):
             node.add_direction(west=self.nodes[(x-1, y)])
             self.nodes[(x-1, y)].add_direction(east=node)
 
-    def get_vision(self, msg):
+    def get_vision(self, msg, agent_id):
         """
         Process the percept information from the message and create
         a dictionary.
@@ -353,11 +359,13 @@ class Graph(object):
         ---------
         msg: dict
             The message from which the information will be extracted.
+        agent_id: int
+            The id of the agent.
         """
         vision = {}
         terrain = msg['content']['percept']['terrain']
         things = msg['content']['percept']['things']
-        cx, cy = self.get_current().location
+        cx, cy = self.get_current(agent_id).location
 
         for option in terrain:
             for x, y in terrain[option]:
@@ -378,13 +386,13 @@ class Graph(object):
                                                       thing['details'])]}
         return vision
 
-    def get_current(self):
+    def get_current(self, agent_id):
         """
         Return the node of the agent's current location.
         """
-        return self.current
+        return self.current[agent_id]
 
-    def get_new_agents(self, vision):
+    def get_new_agents(self, vision, agent_id):
         """
         Create a list with the locations on which there are currently now agent
         but not the previous step.
@@ -396,12 +404,13 @@ class Graph(object):
         vision: dict
             The processed perceptual information from the server's
             request-action message.
+        agent_id: int
+            The id of the agent.
         """
-        # TODO: Add previous location to new agents.
         agents = []
         step = self.get_step()
         for node in vision:
-            if node != self.current.get_location():
+            if node != self.current[agent_id].get_location():
                 for thing in vision[node]['things']:
                     if thing not in self.nodes[node].get_things(step - 1) and \
                             thing[0] == 'entity' and node not in agents:
@@ -413,7 +422,7 @@ class Graph(object):
         Get the agents and location on a certain step from a specific team.
 
         Arguments:
-        step: int
+        step: intagent_
             The step from which the agents are collected.
         team: str
             The team can be either A or B.
@@ -425,7 +434,7 @@ class Graph(object):
                     agents.append((node, thing))
         return agents
 
-    def get_local_nodes(self, offset=None):
+    def get_local_nodes(self, agent_id, offset=None):
         """
         Return the location of the nodes around within the agent's local vision.
         By default the coordinates are create with respect to the agent's
@@ -440,7 +449,7 @@ class Graph(object):
         if offset:
             cx, cy = offset
         else:
-            cx, cy = self.get_current().location
+            cx, cy = self.get_current(agent_id).location
         nodes = []
         for x in range(-5, 6):
             for y in range(-5, 6):
@@ -448,7 +457,7 @@ class Graph(object):
                     nodes.append((x + cx, y + cy))
         return nodes
 
-    def get_local_agents(self, team='A'):
+    def get_local_agents(self, agent_id, team='A'):
         """
         Return the location of the agents from a certain team within 
         the agent's own local vision.
@@ -461,8 +470,8 @@ class Graph(object):
             The team's name.
         """
         local_agents = []
-        cx, cy = self.get_current().location
-        for node in self.get_local_nodes(offset=(0, 0)):
+        cx, cy = self.get_current(agent_id).location
+        for node in self.get_local_nodes(agent_id, offset=(0, 0)):
             if node != (0, 0):
                 real_node = (node[0] + cx, node[1] + cy)
                 for thing in self.nodes[real_node].get_things(step=self.step):
@@ -470,7 +479,7 @@ class Graph(object):
                         local_agents.append(node)                    
         return local_agents
 
-    def get_local_things(self):
+    def get_local_things(self, agent_id):
         """
         Return the location and things of the nodes in the agent's local vision.
         The returned item is a list of tuples. The tuples contain the 
@@ -478,13 +487,13 @@ class Graph(object):
         themselves, respectively.
         """
         local_things = []
-        cx, cy = self.get_current().location
+        cx, cy = self.get_current(agent_id).location
         for node in self.get_local_nodes(offset=(0, 0)):
             real_node = (node[0] + cx, node[1] + cy)
             local_things.append((node, self.nodes[real_node].get_things(step=self.step)))
         return local_things
 
-    def get_new_nodes(self, direction):
+    def get_new_nodes(self, msg, agent_id):
         """
         Get coordinates of the new nodes relative to the root node.
 
@@ -495,7 +504,8 @@ class Graph(object):
         direction: str
             The direction can either be n, e, s, w.
         """
-        cx, cy = self.get_current().location
+        direction = msg['content']['percept']['lastActionParams'][0]
+        cx, cy = self.get_current(agent_id).location
         nodes = []
         if direction == 'n':
             nodes = [(-5, 0), (-4, -1), (-3, -2), (-2, -3), (-1, -4), (0, -5),
@@ -518,7 +528,7 @@ class Graph(object):
     def get_step(self):
         return self.step
 
-    def get_direction(self, location):
+    def get_direction(self, agent_id, location):
         """
         Return the direction of the given location relative to
         the current location.
@@ -529,7 +539,7 @@ class Graph(object):
             The location of the given node, should be adjacent to
             the current location.
         """
-        current = self.current.location
+        current = self.get_current(agent_id).location
         if location[1] < current[1]:
             return 'n'
         elif location[0] > current[0]:
@@ -552,7 +562,7 @@ def agent_moved(msg):
     return False
 
 
-def merge_graphs(g1, g2, offset):
+def merge_graphs(g1, agent1, g2, agent2, offset):
     """
     Merge two graphs. The second graph (g2) will adopt the coordinate system from
     the first graph (g1).
@@ -561,11 +571,13 @@ def merge_graphs(g1, g2, offset):
     ---------
     g1, g2: Graph
         The graphs of the first and second agent, respectively.
+    agent1, agent2: SuperAgent
+        The id's of the two agent to which g1 and g2 belong respectively.
     offset: (int, int)
         The location of the second agent from the perspective of the first.
     """
-    g1_x, g1_y = g1.get_current().location
-    g2_x, g2_y = g2.get_current().location
+    g1_x, g1_y = g1.get_current(agent1).location
+    g2_x, g2_y = g2.get_current(agent2).location
 
     rx, ry = g1_x + offset[0] - g2_x, g1_y + offset[1] - g2_y
 
@@ -598,13 +610,11 @@ def merge_graphs(g1, g2, offset):
                 g1.nodes[(new_x, new_y)].add_direction(west=g1.nodes[(x-1, y)])
                 g1.nodes[(x-1, y)].add_direction(east=g1.nodes[(new_x, new_y)])
 
-    # g2 adopts the nodes from g1
-    g2.nodes = g1.nodes
+    for agent in g2.current:
+        temp = g2.get_current(agent).location
+        g1.current[agent] = g1.nodes[(rx + temp[0], ry + temp[1])]
 
-    # g2 changes its current and next node accordingly
-    g2.current = g1.nodes[(rx + g2_x, ry + g2_y)]
-    g2_x, g2_y = g2.root.location
-    g2.root = g1.nodes[(rx + g2_x, ry + g2_y)]
+    return g1
 
 
 if __name__ == '__main__':
@@ -719,13 +729,13 @@ if __name__ == '__main__':
                 "energy":300},\
             "deadline":1587837763855}}')
 
-    graph1 = Graph()
-    graph1.update(agent_0_step_0)
-    graph1.update(agent_0_step_1)
-    print(graph1.nodes[(0, 0)].get_things(0))
+    graph1 = Graph(0)
+    graph1.update(agent_0_step_0, 0)
+    graph1.update(agent_0_step_1, 0)
 
-    graph2 = Graph()
-    graph2.update(agent_2_step_0)
-    graph2.update(agent_2_step_1)
+    graph2 = Graph(2)
+    graph2.update(agent_2_step_0, 2)
+    graph2.update(agent_2_step_1, 2)
 
-    merge_graphs(graph1, graph2, (1, 2))
+    graph2 = merge_graphs(graph1, 0, graph2, 2, (1, 2))
+    print(graph2)
