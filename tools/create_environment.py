@@ -12,12 +12,16 @@ def main():
     'b{digit}' refers to a block of type {digit}. 
         If an exclamation mark is in front of  the digit (e.g. '!b{digit}'), the block is attatched to an adjascent agent/block.
     'd{digit}' refers to a dispenser of type {digit}.
+
+    A task can be created in the dictionary as follows:
+    {'task_name': (duration, [(x1, y1, block), (x2, y2, block)])}
+    Where the coordinates are relative to the agent.
     """
     mapping = [
         ['.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.'],
         ['.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.'],
         ['.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.'],
-        ['.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', 'd1', '.', '.', '.', '.', '.'],
+        ['.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', 'd0', '.', '.', '.', '.', '.'],
         ['.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.'],
         ['.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.'],
         ['.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.'],
@@ -36,6 +40,8 @@ def main():
         ['.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.'],
         ['A2', 'B2', 'B1', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.']
     ]
+
+    tasks = {'task1': (100, [(1, 0, 'b0')])}
     steps = 300
 
     # get the prefix of the tools directory
@@ -50,7 +56,7 @@ def main():
     
     # create the setup file
     setup_file = open(path_to_config + setup_name, "w")
-    config = create_setup_file(mapping, setup_file)
+    config = create_setup_file(mapping, tasks, setup_file)
 
     # get sample files
     sample_config = json.load(open(tools_prefix + 'sample/Custom.json'))
@@ -84,7 +90,7 @@ def main():
 def get_adjacent(i, j):
     return [(i+1, j), (i, j+1), (i-1, j), (i, j-1)]
 
-def create_setup_file(mapping, output_file):
+def create_setup_file(mapping, tasks, output_file):
     config = {'teams':[], 'agent_ids': [], 'blocks':[]}
     attach_queue = []
     for i in range(len(mapping[0])):
@@ -114,14 +120,29 @@ def create_setup_file(mapping, output_file):
                 output_file.write(f"add {i} {j} dispenser b{element[1:]}\n")
             elif 'b' in element:
                 # add to config
-                if element[-2:] not in config['blocks']:
-                    config['blocks'].append(element[-2:])
+                if element[-1] not in config['blocks']:
+                    config['blocks'].append(element[-1])
                 # create block
                 output_file.write(f"add {i} {j} block {element[-2:]}\n")
                 if '!' in element:
                     for adj_i, adj_j in get_adjacent(i, j):
                         if mapping[adj_j][adj_i][0].isupper() or 'b' in mapping[adj_j][adj_i]:
                             attach_queue.append(f'attach {adj_i} {adj_j} {i} {j}\n')
+    
+    # create tasks
+    for name, (duration, options) in tasks.items():
+        # add blocks to shape
+        task = f"create task {name} {duration} "
+        for i, (rel_x, rel_y, block) in enumerate(options):
+            # add to config
+            if block[1:] not in config['blocks']:
+                config['blocks'].append(block[1:])
+            if i != 0:
+                task += ';'
+            task += f"{rel_x},{rel_y},{block}"
+
+        # create task
+        output_file.write(task + '\n')
 
     # add attachments
     output_file.writelines(attach_queue)
