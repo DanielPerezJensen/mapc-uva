@@ -11,12 +11,13 @@ def main():
     '{team}{digit}' refers to agent{team}{digit}, where team must be uppercase.
     'b{digit}' refers to a block of type {digit}. 
         If an exclamation mark is in front of  the digit (e.g. '!b{digit}'), the block is attatched to an adjascent agent/block.
+    'd{digit}' refers to a dispenser of type {digit}.
     """
     mapping = [
         ['.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.'],
         ['.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.'],
         ['.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.'],
-        ['.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.'],
+        ['.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', 'd1', '.', '.', '.', '.', '.'],
         ['.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.'],
         ['.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.'],
         ['.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.'],
@@ -28,9 +29,9 @@ def main():
         ['.', '#', '#', '#', '#', '#', '#', '#', '#', '#', '#', '#', '#', '#', '#', '.', '.', '.', '.', '.'],
         ['.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.'],
         ['.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.'],
-        ['.', '.', '.', '.', '#', '.', '.', '.', '.', '!b0', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.'],
-        ['.', '#', '#', '#', '#', '.', '.', '.','!b0','A1','!b0', '.', '.', '.', '.', '.', '.', '.', '.', '.'],
-        ['.', '.', '.', '.', '#', '.', '.', '.', '.', '!b0', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.'],
+        ['.', '.', '.', '.', '#', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.'],
+        ['.', '#', '#', '#', '#', '.', '.', '.','.','A1','.', '.', '.', '.', '.', '.', '.', '.', '.', '.'],
+        ['.', '.', '.', '.', '#', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.'],
         ['.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.'],
         ['.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.'],
         ['A2', 'B2', 'B1', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.']
@@ -99,19 +100,25 @@ def create_setup_file(mapping, output_file):
 
                 # move agent
                 output_file.write(f"move {i} {j} agent{element}\n")
-            elif element == "#":
+            elif element == '#':
                 # create obstacle
                 output_file.write(f"terrain {i} {j} obstacle\n")
-            elif element == "g":
+            elif element == 'g':
                 # create goal location
                 output_file.write(f"terrain {i} {j} goal\n")
-            elif "b" in element:
+            elif element[0] == 'd':
+                # add to config
+                if element[1:] not in config['blocks']:
+                    config['blocks'].append(element[1:])
+                # create dispenser
+                output_file.write(f"add {i} {j} dispenser {element[1:]}")
+            elif 'b' in element:
                 # add to config
                 if element[-2:] not in config['blocks']:
                     config['blocks'].append(element[-2:])
                 # create block
                 output_file.write(f"add {i} {j} block {element[-2:]}\n")
-                if "!" in element:
+                if '!' in element:
                     for adj_i, adj_j in get_adjacent(i, j):
                         if mapping[adj_j][adj_i][0].isupper() or 'b' in mapping[adj_j][adj_i]:
                             attach_queue.append(f'attach {adj_i} {adj_j} {i} {j}\n')
