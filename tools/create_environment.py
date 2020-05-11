@@ -111,7 +111,7 @@ def create_setup_file(mapping, output_file):
                 if element[1:] not in config['blocks']:
                     config['blocks'].append(element[1:])
                 # create dispenser
-                output_file.write(f"add {i} {j} dispenser {element[1:]}")
+                output_file.write(f"add {i} {j} dispenser b{element[1:]}\n")
             elif 'b' in element:
                 # add to config
                 if element[-2:] not in config['blocks']:
