@@ -31,6 +31,7 @@ class Agent(Server):
         self.last_action_move = None
         self.beliefs = Graph()
         self.dstar = None
+        self.steps = None
 
     def nav_to(self, goal, new_obs=[]):
         """
@@ -57,19 +58,22 @@ class Agent(Server):
         # Get the new direction
         new_loc = self.dstar.move_to_goal()
 
-        # Check if path is possible or already at goal location
+        # Check if path is impossible or already at goal location
         if not new_loc:
-            return None
+            return "", True
 
         direction = self.beliefs.get_direction(new_loc)
 
         if self.beliefs.nodes[new_loc]._is_obstacle():
             clear_pos_x = (new_loc[0] - self.beliefs.current.location[0]) * 2
             clear_pos_y = (new_loc[1] - self.beliefs.current.location[1]) * 2
-            return self.clear(clear_pos_x, clear_pos_y)
+            # Clear obstacle (invert flag because nav_to requires multiple
+            action, _ = self.clear(clear_pos_x, clear_pos_y)
+            return action, False
         else:
-            # Move to location
-            return self.move(direction)
+            # Move to location (invert flag because nav_to requires multiple moves)
+            action, _ = self.move(direction)
+            return action, False
 
     def quit_nav(self):
         """
@@ -85,7 +89,7 @@ class Agent(Server):
         self.last_action_move = ""
 
         # Create and return the request
-        return self._create_action("skip")
+        return self._create_action("skip"), True
 
     def move(self, direction):
         """
@@ -101,7 +105,7 @@ class Agent(Server):
         self.last_action_move = direction
 
         # Create and return the request.
-        return self._create_action("move", direction)
+        return self._create_action("move", direction), True
 
     def attach(self, direction):
         """
@@ -118,7 +122,7 @@ class Agent(Server):
         self.last_action_move = ""
 
         # Create and return the request.
-        return self._create_action("attach", direction)
+        return self._create_action("attach", direction), True
 
     def detach(self, direction):
         """
@@ -135,7 +139,7 @@ class Agent(Server):
         self.last_action_move = ""
 
         # Create and return the request.
-        return self._create_action("detach", direction)
+        return self._create_action("detach", direction), True
 
     def rotate(self, direction):
         """
@@ -152,7 +156,7 @@ class Agent(Server):
         self.last_action_move = ""
 
         # Create and return the request.
-        return self._create_action("rotate", direction)
+        return self._create_action("rotate", direction), True
 
     def connect(self, agent, x, y):
         """
@@ -171,7 +175,7 @@ class Agent(Server):
         self.last_action_move = ""
 
         # Create and return the request.
-        return self._create_action("connect", agent, str(x), str(y))
+        return self._create_action("connect", agent, str(x), str(y)), True
 
     def disconnect(self, x1, y1, x2, y2):
         """
@@ -193,7 +197,7 @@ class Agent(Server):
 
         # Create and return the request.
         return self._create_action("disconnect", str(x1), str(y1),
-                                   str(x2), str(y2))
+                                   str(x2), str(y2)), True
 
     def request(self, direction):
         """
@@ -211,7 +215,7 @@ class Agent(Server):
         self.last_action_move = ""
 
         # Create and return the request.
-        return self._create_action("request", direction)
+        return self._create_action("request", direction), True
 
     def submit(self, task):
         """
@@ -227,7 +231,8 @@ class Agent(Server):
         self.last_action_move = ""
 
         # Create and return the request.
-        return self._create_action("submit", task)
+        return self._create_action("submit", task), True
+
 
     def clear(self, x, y):
         """
@@ -247,7 +252,7 @@ class Agent(Server):
         self.last_action_move = ""
 
         # Create and return the request.
-        return self._create_action("clear", x, y)
+        return self._create_action("clear", x, y), True
 
     def accept(self, task):
         """
@@ -266,7 +271,7 @@ class Agent(Server):
         self.last_action_move = ""
 
         # Create and return the request.
-        return self._create_action("accept", task)
+        return self._create_action("accept", task), True
 
     # Helper functions
     @staticmethod
