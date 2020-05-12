@@ -41,13 +41,11 @@ class SuperAgent(*AGENTS, BDIAgent):
                     # self.update_beliefs(new_obstacle, new_emtpy, new_agents)
 
                     # TODO: Listen to strategist thread for role
-                    time.sleep(1)
-                    if msg['content']['step'] > 0:
-                        local_agents = self.strategist.potential_agents(agent_id)
-                        #print(f'{agent_id} --> {local_agents}')
-                        self.strategist.merge_agents(agent_id, local_agents)
-                        #print(f'AgentA{agent_id} is paired with: {self.strategist.get_graph_pairs(agent_id)}')
-                        print(self.strategist.get_all_pairs())
+                    local_agents = self.strategist.potential_agents(agent_id)
+                    self.strategist.merge_agents(agent_id, local_agents)
+                    #print(f'{agent_id} --> {local_agents}')
+                    #print(f'AgentA{agent_id} is paired with: {self.strategist.get_graph_pairs(agent_id)}')
+                    #print(len(self.strategist.get_all_pairs()))
 
                     # TODO: Set role as chosen by strategist
 
@@ -55,8 +53,15 @@ class SuperAgent(*AGENTS, BDIAgent):
 
                     # TODO: Reasoning according to selected role
                     
-                    action = selected_agent.explore(self, agent_id, new_obstacle, 
-                                                    new_empty, new_agents)
+                    options = ['single', 'random', 'east']
+                    action = selected_agent.explore(self, agent_id,
+                                                    new_obstacle, new_empty,
+                                                    new_agents, options)
+                    
+                    print('Current location: ' +
+                           str(self.strategist.graphs[agent_id].get_current(agent_id).location))
+
+                    action = self.move('w')
 
                     if not action:
                         action = self.skip()

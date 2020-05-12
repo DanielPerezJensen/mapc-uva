@@ -158,7 +158,7 @@ class Node(object):
 
         self.things[step] = list(dict.fromkeys(self.things[step]))
 
-    def get_direction(self, direction=None):
+    def get_direction(self, width=None, length=None, direction=None):
         """
         Return the node in the specified direction. If no direction is provided
         the current node is returned.
@@ -168,10 +168,35 @@ class Node(object):
         direction: str
             The direction of the requested node (n, e, s, w).
         """
+        x, y = self.location
         if direction:
-            return self.directions[direction]
+            if self.directions[direction]:
+                return self.directions[direction].location
+
+            elif length:
+                if direction == 'n':
+                    if y == 0:
+                        return (x, length - 1)
+                    return (x, y-1)
+                if direction == 's':
+                    if y == length - 1:
+                        return (x, 0)
+                    return (x, y+1)
+
+            elif width:
+                if direction == 'w':
+                    if x == 0:
+                        return (width - 1, y)
+                    return (x-1, y)
+                if direction == 'e':
+                    if x == width - 1:
+                        return (0, y)
+                    return (x+1, y)
         else:
-            return self
+            return [self.get_direction(width=width, length=length, direction='n'),
+                    self.get_direction(width=width, length=length, direction='e'),
+                    self.get_direction(width=width, length=length, direction='s'),
+                    self.get_direction(width=width, length=length, direction='w')]
 
     def add_direction(self, north=None, east=None, south=None, west=None):
         """
@@ -224,24 +249,26 @@ class Graph(object):
         """
         self.nodes = {}
         self.step = 0
+        self.width = None
+        self.length = None
 
         for x in range(-5, 6):
             for y in range(-5, 6):
                 if abs(x) + abs(y) < 6:
-                    self.nodes[(x, y)] = Node((x, y))
+                    self.nodes[self.modulate((x, y))] = Node(self.modulate((x, y)))
 
         self.current = {agent_id: self.nodes[(0, 0)]}
 
         for node in self.nodes.values():
             x, y = node.location
-            if (x, y-1) in self.nodes.keys():
-                node.add_direction(north=self.nodes[(x, y-1)])
-            if (x+1, y) in self.nodes.keys():
-                node.add_direction(east=self.nodes[(x+1, y)])
-            if (x, y+1) in self.nodes.keys():
-                node.add_direction(south=self.nodes[(x, y+1)])
-            if (x-1, y) in self.nodes.keys():
-                node.add_direction(west=self.nodes[(x-1, y)])
+            if self.modulate((x, y-1)) in self.nodes.keys():
+                node.add_direction(north=self.nodes[self.modulate((x, y-1))])
+            if self.modulate((x+1, y)) in self.nodes.keys():
+                node.add_direction(east=self.nodes[self.modulate((x+1, y))])
+            if self.modulate((x, y+1)) in self.nodes.keys():
+                node.add_direction(south=self.nodes[self.modulate((x, y+1))])
+            if self.modulate((x-1, y)) in self.nodes.keys():
+                node.add_direction(west=self.nodes[self.modulate((x-1, y))])
 
     def __str__(self):
         """
@@ -329,21 +356,21 @@ class Graph(object):
         that direction.
         """
         x, y = node.location
-        if (x, y-1) in self.nodes and node.directions['n'] is None:
-            node.add_direction(north=self.nodes[(x, y-1)])
-            self.nodes[(x, y-1)].add_direction(south=node)
+        if self.modulate((x, y-1)) in self.nodes and node.directions['n'] is None:
+            node.add_direction(north=self.nodes[self.modulate((x, y-1))])
+            self.nodes[self.modulate((x, y-1))].add_direction(south=node)
 
-        if (x+1, y) in self.nodes and node.directions['e'] is None:
-            node.add_direction(east=self.nodes[(x+1, y)])
-            self.nodes[(x+1, y)].add_direction(west=node)
+        if self.modulate((x+1, y)) in self.nodes and node.directions['e'] is None:
+            node.add_direction(east=self.nodes[self.modulate((x+1, y))])
+            self.nodes[self.modulate((x+1, y))].add_direction(west=node)
 
-        if (x, y+1) in self.nodes and node.directions['s'] is None:
-            node.add_direction(south=self.nodes[(x, y+1)])
-            self.nodes[(x, y+1)].add_direction(north=node)
+        if self.modulate((x, y+1)) in self.nodes and node.directions['s'] is None:
+            node.add_direction(south=self.nodes[self.modulate((x, y+1))])
+            self.nodes[self.modulate((x, y+1))].add_direction(north=node)
 
-        if (x-1, y) in self.nodes and node.directions['w'] is None:
-            node.add_direction(west=self.nodes[(x-1, y)])
-            self.nodes[(x-1, y)].add_direction(east=node)
+        if self.modulate((x-1, y)) in self.nodes and node.directions['w'] is None:
+            node.add_direction(west=self.nodes[self.modulate((x-1, y))])
+            self.nodes[self.modulate((x-1, y))].add_direction(east=node)
 
     def get_vision(self, msg, agent_id):
         """
@@ -412,6 +439,7 @@ class Graph(object):
         for node in vision:
             if node != self.current[agent_id].get_location():
                 for thing in vision[node]['things']:
+                    node = self.modulate(node)
                     if thing not in self.nodes[node].get_things(step - 1) and \
                             thing[0] == 'entity' and node not in agents:
                         agents.append(node)
@@ -429,6 +457,7 @@ class Graph(object):
         """
         agents = []
         for node in self.nodes:
+            node = self.modulate(node)
             for thing in self.nodes[node].get_things(step):
                 if thing[0] == 'entity' and thing[1] == team:
                     agents.append((node, thing))
@@ -454,7 +483,7 @@ class Graph(object):
         for x in range(-5, 6):
             for y in range(-5, 6):
                 if abs(x) + abs(y) < 6:
-                    nodes.append((x + cx, y + cy))
+                    nodes.append((self.modulate((x + cx, y + cy))))
         return nodes
 
     def get_local_agents(self, agent_id, team='A'):
@@ -473,7 +502,7 @@ class Graph(object):
         cx, cy = self.get_current(agent_id).location
         for node in self.get_local_nodes(agent_id, offset=(0, 0)):
             if node != (0, 0):
-                real_node = (node[0] + cx, node[1] + cy)
+                real_node = self.modulate((node[0] + cx, node[1] + cy))
                 for thing in self.nodes[real_node].get_things(step=self.step):
                     if thing[0] == 'entity' and thing[1] == team:
                         local_agents.append(node)                    
@@ -489,7 +518,7 @@ class Graph(object):
         local_things = []
         cx, cy = self.get_current(agent_id).location
         for node in self.get_local_nodes(offset=(0, 0)):
-            real_node = (node[0] + cx, node[1] + cy)
+            real_node = self.modulate((node[0] + cx, node[1] + cy))
             local_things.append((node, self.nodes[real_node].get_things(step=self.step)))
         return local_things
 
@@ -521,7 +550,7 @@ class Graph(object):
                      (-4, 1), (-3, 2), (-2, 3), (-1, 4), (0, 5)]
 
         for i, node in enumerate(nodes):
-            nodes[i] = (node[0] + cx, node[1] + cy)
+            nodes[i] = self.modulate((node[0] + cx, node[1] + cy))
 
         return nodes
 
@@ -531,7 +560,7 @@ class Graph(object):
     def get_direction(self, agent_id, location):
         """
         Return the direction of the given location relative to
-        the current location.
+        the agent's current location.
 
         Arguments
         ---------
@@ -540,6 +569,18 @@ class Graph(object):
             the current location.
         """
         current = self.get_current(agent_id).location
+        if self.width:
+            if current[0] == 0 and location[0] == self.width-1:
+                return 'w'
+            elif current[0] == self.width-1 and location[0] == 0:
+                return 'e'
+
+        if self.length:
+            if current[1] == 0 and location[1] == self.length-1:
+                return 'n'
+            elif current[1] == self.length-1 and location[1] == 0:
+                return 's'
+
         if location[1] < current[1]:
             return 'n'
         elif location[0] > current[0]:
@@ -550,6 +591,55 @@ class Graph(object):
             return 'w'
         else:
             return ''
+
+    def modulate(self, location):
+        """
+        Apply the width and length of the map as a modulo on the location
+        values. Does nothing if no width or length have been set yet.
+
+        Arguments
+        ---------
+        coordinates: (int, int)
+            The location of the given node.
+        """
+        x, y = location
+        if self.width:
+            x = x % self.width
+        if self.length:
+            y = y % self.length
+        return (x, y)
+
+    def modulate_graph(self, width, length):
+        """
+        Apply the width and length of the map as a modulo to every node in the
+        graph and update/add nodes where neccessary.
+        """
+        self.width = width
+        self.length = length
+
+        for node in self.nodes:
+            if self.modulate(node) in self.nodes:
+                if node != self.modulate(node):
+                    if self.nodes[node].get_terrain()[1] > \
+                            self.nodes[self.modulate(node)].get_terrain()[1]:
+                        self.nodes[self.modulate(node)].set_terrain(self.nodes[node].get_terrain()[0], 
+                                                                    self.nodes[node].get_terrain()[1])
+
+                    for things in self.nodes[node].get_things():
+                        self.nodes[self.modulate(node)].add_things(things[0], things[1])
+            else:
+                self.nodes[self.modulate(node)] = Node(self.modulate(node),
+                                                       terrain=self.nodes[node].get_terrain()[0],
+                                                       step=self.nodes[node].get_terrain()[1])
+
+                for things in self.nodes[node].get_things():
+                    self.nodes[self.modulate(node)].add_things(things[0], things[1])
+
+        for agent, node in self.current.items():
+            self.current[agent] = self.nodes[self.modulate(node.get_location())]
+
+        for node in self.nodes:
+            self.add_neighbours(self.nodes[node])
 
 
 def agent_moved(msg):
@@ -582,7 +672,7 @@ def merge_graphs(g1, agent1, g2, agent2, offset):
     rx, ry = g1_x + offset[0] - g2_x, g1_y + offset[1] - g2_y
 
     for x, y in g2.nodes:
-        new_x, new_y = rx + x, ry + y
+        new_x, new_y = self.modulate((rx + x, ry + y))
         if (new_x, new_y) in g1.nodes:
             # Get the most up-to-date terrain information
             if g1.nodes[(new_x, new_y)].get_terrain()[1] < \
@@ -612,7 +702,7 @@ def merge_graphs(g1, agent1, g2, agent2, offset):
 
     for agent in g2.current:
         temp = g2.get_current(agent).location
-        g1.current[agent] = g1.nodes[(rx + temp[0], ry + temp[1])]
+        g1.current[agent] = g1.nodes[self.modulate((rx + temp[0], ry + temp[1]))]
 
     return g1
 
