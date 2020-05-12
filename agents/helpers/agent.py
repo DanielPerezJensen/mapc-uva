@@ -338,10 +338,7 @@ class DStarLite(object):
         return 1
 
     def neighbors(self, id):
-        (x, y) = id
-        results = [(x + 1, y), (x, y - 1), (x - 1, y), (x, y + 1)]
-        if (x + y) % 2 == 0: results.reverse()  # aesthetics
-        return results
+        return [self.graph.nodes[id].get_direction(direction) for direction in ['n', 'e', 's', 'w']]
 
     def calculate_rhs(self, node):
         lowest_cost_neighbour = self.lowest_cost_neighbour(node)

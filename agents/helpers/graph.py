@@ -158,7 +158,7 @@ class Node(object):
 
         self.things[step] = list(dict.fromkeys(self.things[step]))
 
-    def get_direction(self, width=None, length=None, direction=None):
+    def get_direction(self, width=None, height=None, direction=None):
         """
         Return the node in the specified direction. If no direction is provided
         the current node is returned.
@@ -173,13 +173,13 @@ class Node(object):
             if self.directions[direction]:
                 return self.directions[direction].location
 
-            elif length:
+            elif height:
                 if direction == 'n':
                     if y == 0:
-                        return (x, length - 1)
+                        return (x, height - 1)
                     return (x, y-1)
                 if direction == 's':
-                    if y == length - 1:
+                    if y == height - 1:
                         return (x, 0)
                     return (x, y+1)
 
@@ -193,10 +193,10 @@ class Node(object):
                         return (0, y)
                     return (x+1, y)
         else:
-            return [self.get_direction(width=width, length=length, direction='n'),
-                    self.get_direction(width=width, length=length, direction='e'),
-                    self.get_direction(width=width, length=length, direction='s'),
-                    self.get_direction(width=width, length=length, direction='w')]
+            return [self.get_direction(width=width, height=height, direction='n'),
+                    self.get_direction(width=width, height=height, direction='e'),
+                    self.get_direction(width=width, height=height, direction='s'),
+                    self.get_direction(width=width, height=height, direction='w')]
 
     def add_direction(self, north=None, east=None, south=None, west=None):
         """
@@ -250,7 +250,7 @@ class Graph(object):
         self.nodes = {}
         self.step = 0
         self.width = None
-        self.length = None
+        self.height = None
 
         for x in range(-5, 6):
             for y in range(-5, 6):
@@ -258,6 +258,7 @@ class Graph(object):
                     self.nodes[self.modulate((x, y))] = Node(self.modulate((x, y)))
 
         self.current = {agent_id: self.nodes[(0, 0)]}
+        self.things = {agent_id: {'goals':[], 'dispensers':{}, 'taskboards':[]}}
 
         for node in self.nodes.values():
             x, y = node.location
@@ -397,6 +398,11 @@ class Graph(object):
         for option in terrain:
             for x, y in terrain[option]:
                 new_x, new_y = x + cx, y + cy
+
+                if option == "goal":
+                    if (new_x, new_y) not in self.things[agent_id]['goals']:
+                        self.things[agent_id]['goals'].append((new_x, new_y))
+                
                 if (new_x, new_y) in vision:
                     vision[(new_x, new_y)]['terrain'] = option
                 else:
@@ -404,6 +410,17 @@ class Graph(object):
 
         for thing in things:
             new_x, new_y = thing['x'] + cx, thing['y'] + cy
+
+            if thing['type'] == 'taskboard':
+                if (new_x, new_y) not in self.things[agent_id]['taskboards']:
+                    self.things[agent_id]['taskboards'].append((new_x, new_y))
+            elif thing['type'] == 'dispenser':
+                if thing['details'] not in self.things[agent_id]['blocks']:
+                    self.things[agent_id]['blocks'][thing['details']] = [(new_x, new_y)]
+                elif (new_x, new_y) not in self.things[agent_id]['blocks'][thing['details']]:
+                    self.things[agent_id]['blocks'][thing['details']].append((new_x, new_y))
+
+
             if (new_x, new_y) in vision:
                 vision[(new_x, new_y)]['things'].append((thing['type'],
                                                          thing['details']))
@@ -517,7 +534,7 @@ class Graph(object):
         """
         local_things = []
         cx, cy = self.get_current(agent_id).location
-        for node in self.get_local_nodes(offset=(0, 0)):
+        for node in self.get_local_nodes(agent_id, offset=(0, 0)):
             real_node = self.modulate((node[0] + cx, node[1] + cy))
             local_things.append((node, self.nodes[real_node].get_things(step=self.step)))
         return local_things
@@ -575,10 +592,10 @@ class Graph(object):
             elif current[0] == self.width-1 and location[0] == 0:
                 return 'e'
 
-        if self.length:
-            if current[1] == 0 and location[1] == self.length-1:
+        if self.height:
+            if current[1] == 0 and location[1] == self.height-1:
                 return 'n'
-            elif current[1] == self.length-1 and location[1] == 0:
+            elif current[1] == self.height-1 and location[1] == 0:
                 return 's'
 
         if location[1] < current[1]:
@@ -594,8 +611,8 @@ class Graph(object):
 
     def modulate(self, location):
         """
-        Apply the width and length of the map as a modulo on the location
-        values. Does nothing if no width or length have been set yet.
+        Apply the width and height of the map as a modulo on the location
+        values. Does nothing if no width or height have been set yet.
 
         Arguments
         ---------
@@ -605,17 +622,17 @@ class Graph(object):
         x, y = location
         if self.width:
             x = x % self.width
-        if self.length:
-            y = y % self.length
+        if self.height:
+            y = y % self.height
         return (x, y)
 
-    def modulate_graph(self, width, length):
+    def modulate_graph(self, width, height):
         """
-        Apply the width and length of the map as a modulo to every node in the
+        Apply the width and height of the map as a modulo to every node in the
         graph and update/add nodes where neccessary.
         """
         self.width = width
-        self.length = length
+        self.height = height
 
         for node in self.nodes:
             if self.modulate(node) in self.nodes:
@@ -703,6 +720,19 @@ def merge_graphs(g1, agent1, g2, agent2, offset):
     for agent in g2.current:
         temp = g2.get_current(agent).location
         g1.current[agent] = g1.nodes[self.modulate((rx + temp[0], ry + temp[1]))]
+
+    for thing in g2.things[agent2]:
+        if thing == 'dispensers':
+            for block in g2.things[agent2][thing]:
+                for x, y in g2.things[thing][block]:
+                    new_x, new_y = rx + x, ry + y
+                    if (new_x, new_y) not in g1.things[agent1]['dispensers'][block]:
+                        g1.things[agent1]['dispensers'][block].append((new_x, new_y))
+        else:
+            for x, y in g2.things[agent2][thing]:
+                new_x, new_y = rx + x, ry + y
+                if (new_x, new_y) not in g1.things[agent1][thing]:
+                    g1.things[agent1][thing].append((new_x, new_y))
 
     return g1
 

@@ -60,6 +60,7 @@ class Mapper(Agent):
         r = list(min_max) + [-x for x in list(min_max)]
         if not hasattr(self, 'r_goal'):
             self.r_goal = [random.choice(r), random.choice(r)]
+        print(f'Current random goal: {self.r_goal}')
 
         action = self.nav_to((self.r_goal[0], self.r_goal[1]), 
                              agent_id, new_obs)
