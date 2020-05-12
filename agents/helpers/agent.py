@@ -32,7 +32,6 @@ class Agent(Server):
         super().__init__(user, pw, print_json)
         self.last_action_move = None
         self.beliefs = self.strategist.get_graph(self._user_id)
-
         self.dstar = None
         self.steps = None
 
@@ -65,7 +64,6 @@ class Agent(Server):
             return "", True
 
         direction = self.beliefs.get_direction(agent_id, new_loc)
-
 
         if self.beliefs.nodes[new_loc]._is_obstacle():
             clear_pos_x = (new_loc[0] - self.beliefs.current.location[0]) * 2
@@ -360,7 +358,6 @@ class DStarLite(object):
         results = [(x + 1, y), (x, y - 1), (x - 1, y), (x, y + 1)]
         if (x + y) % 2 == 0: results.reverse()  # aesthetics
         return [self.graph.modulate(coords) for coords in results]
-
 
     def calculate_rhs(self, node):
         lowest_cost_neighbour = self.lowest_cost_neighbour(node)
