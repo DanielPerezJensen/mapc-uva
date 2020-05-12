@@ -192,6 +192,7 @@ class Node(object):
                     if x == width - 1:
                         return (0, y)
                     return (x+1, y)
+
         else:
             return [self.get_direction(width=width, height=height, direction='n'),
                     self.get_direction(width=width, height=height, direction='e'),
@@ -424,7 +425,7 @@ class Graph(object):
                 if option == "goal":
                     if (new_x, new_y) not in self.things['goals']:
                         self.things['goals'].append((new_x, new_y))
-                
+
                 if (new_x, new_y) in vision:
                     vision[(new_x, new_y)]['terrain'] = option
                 else:
@@ -436,11 +437,11 @@ class Graph(object):
             if thing['type'] == 'taskboard':
                 if (new_x, new_y) not in self.things['taskboards']:
                     self.things['taskboards'].append((new_x, new_y))
-            elif thing['type'] == 'dispenser':
-                if thing['details'] not in self.things['blocks']:
-                    self.things['blocks'][thing['details']] = [(new_x, new_y)]
-                elif (new_x, new_y) not in self.things['blocks'][thing['details']]:
-                    self.things['blocks'][thing['details']].append((new_x, new_y))
+            elif thing['type'] == 'dispensers':
+                if thing['details'] not in self.things['dispensers']:
+                    self.things['dispensers'][thing['details']] = [(new_x, new_y)]
+                elif (new_x, new_y) not in self.things['dispensers'][thing['details']]:
+                    self.things['dispensers'][thing['details']].append((new_x, new_y))
 
 
             if (new_x, new_y) in vision:

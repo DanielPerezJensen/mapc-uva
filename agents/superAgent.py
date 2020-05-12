@@ -6,6 +6,7 @@ from .mapper import Mapper
 from .spy import Spy
 import json
 import time
+import threading
 
 
 AGENTS = [Attacker, Builder, Defender, Mapper, Spy]
@@ -25,6 +26,7 @@ class SuperAgent(*AGENTS, BDIAgent):
         """
         Function that runs the agents.
         """
+        lock = threading.Lock()
         self.beliefs = self.strategist.get_graph(self._user_id)
         while True:
             # Receive a message.
@@ -37,15 +39,25 @@ class SuperAgent(*AGENTS, BDIAgent):
                     request_id = self._get_request_id(msg)
                     agent_id = self._user_id
                     # Update beliefs
+                    
+                    lock.acquire()
                     new_obstacle, new_empty, new_agents = \
                         self.strategist.get_graph(agent_id).update(msg, agent_id)
+                    lock.release()
                     # self.update_beliefs(new_obstacle, new_emtpy, new_agents)
 
                     # TODO: Listen to strategist thread for role
+
+                    lock.acquire()
                     local_agents = self.strategist.potential_agents(agent_id)
-                    self.strategist.merge_agents(agent_id, local_agents)
-                    #print(f'{agent_id} --> {local_agents}')
+                    lock.release()
+                    print(f'{agent_id} --> {local_agents}')
                     #print(f'AgentA{agent_id} is paired with: {self.strategist.get_graph_pairs(agent_id)}')
+                    
+                    lock.acquire()
+                    self.strategist.merge_agents(agent_id, local_agents)
+                    lock.release()
+                    
                     #print(len(self.strategist.get_all_pairs()))
 
                     # TODO: Set role as chosen by strategist

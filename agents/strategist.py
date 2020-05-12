@@ -6,9 +6,10 @@ class Strategist(object):
         self.agents = {}
         self.graphs = {}
 
-    def insert_agents(self, agent):
-        self.agents[agent._user_id] = agent
-        self.graphs[agent._user_id] = Graph(agent._user_id)
+    def insert_agents(self, a_list):
+        for agent in a_list:
+            self.agents[agent._user_id] = agent
+            self.graphs[agent._user_id] = Graph(agent._user_id)
     
     def get_graph(self, agent_id):
         return self.graphs[agent_id]
@@ -49,11 +50,20 @@ class Strategist(object):
                 if agent in self.graphs[agent_id].current.keys():
                     pass#print(f'Agent{agent} is already merged with Agent{agent_id}.')
                 else:
-                    #print(f'Agent {COLORS[agent % 15]}{agent:<10}{END_COLOR} merged with Agent {COLORS[agent_id % 15]}{agent_id:<10}{END_COLOR}')
-                    g1 = merge_graphs(self.graphs[agent_id], agent_id,
-                                      self.graphs[agent], agent, location)
-                    for agent in g1.current:
-                        self.graphs[agent] = g1
+                    
+                    if agent < agent_id:
+                        print(f'Agent{agent_id} is merging with Agent{agent}.1')
+                        location = (-location[0], -location[1])
+                        g1 = merge_graphs(self.graphs[agent], agent,
+                                        self.graphs[agent_id], agent_id, location)
+                        for agent in g1.current:
+                            self.graphs[agent] = g1
+                    else:
+                        print(f'Agent{agent} is merging with Agent{agent_id}.2')
+                        g1 = merge_graphs(self.graphs[agent_id], agent_id,
+                                        self.graphs[agent], agent, location)
+                        for agent in g1.current:
+                            self.graphs[agent] = g1
 
     def eliminate_agents(self, agent_id, location, potential):
         """
