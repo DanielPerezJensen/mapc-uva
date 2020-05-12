@@ -31,7 +31,6 @@ class Agent(Server):
         """
         super().__init__(user, pw, print_json)
         self.last_action_move = None
-        self.beliefs = self.strategist.get_graph(self._user_id)
         self.dstar = None
         self.steps = None
 
@@ -50,6 +49,7 @@ class Agent(Server):
         Returns the action.
         If at goal location or no path is possible, returns None.
         """
+        
         # Initialize or update
         if not self.dstar or self.dstar.goal != goal:
             self.dstar = DStarLite(self.beliefs, goal, agent_id)
@@ -66,8 +66,8 @@ class Agent(Server):
         direction = self.beliefs.get_direction(agent_id, new_loc)
 
         if self.beliefs.nodes[new_loc]._is_obstacle():
-            clear_pos_x = (new_loc[0] - self.beliefs.current.location[0]) * 2
-            clear_pos_y = (new_loc[1] - self.beliefs.current.location[1]) * 2
+            clear_pos_x = (new_loc[0] - self.beliefs.get_current(agent_id).location[0]) * 2
+            clear_pos_y = (new_loc[1] - self.beliefs.get_current(agent_id).location[1]) * 2
             # Clear obstacle (invert flag because nav_to requires multiple
             action, _ = self.clear(clear_pos_x, clear_pos_y)
             return action, False
@@ -463,8 +463,8 @@ class DStarLite(object):
             self.update_nodes({node for wallnode in new_obs
                               for node in self.neighbors(wallnode)
                               if (node not in self.graph.nodes or not \
-                                  self.graph.nodes[node]._is_thing(self.graph.step, \
-                                      self.graph.get_current(self.agent_id).location))})
+                                  self.graph.nodes[node]._is_thing(self.graph.step,
+                                  self.graph.get_current(self.agent_id).location))})
 
             self.compute_shortest_path()
 

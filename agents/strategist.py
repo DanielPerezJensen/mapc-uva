@@ -3,10 +3,10 @@ from agents.helpers.graph import Graph
 
 class Strategist(object):
     def __init__(self):
-        pass
+        self.agents = {}
+        self.graphs = {}
 
     def insert_agents(self, a_list):
-        self.agents, self.graphs = {}, {}
         for agent in a_list:
             self.agents[agent._user_id] = agent
             self.graphs[agent._user_id] = Graph(agent._user_id)
@@ -48,12 +48,22 @@ class Strategist(object):
                 agent = local_agents[location][0]
                 # Merge agents
                 if agent in self.graphs[agent_id].current.keys():
-                    print(f'Agent{agent} is already merged with Agent{agent_id}.')
+                    pass#print(f'Agent{agent} is already merged with Agent{agent_id}.')
                 else:
-                    g1 = merge_graphs(self.graphs[agent_id], agent_id,
-                                      self.graphs[agent], agent, location)
-                    for agent in g1.current:
-                        self.graphs[agent] = g1
+                    
+                    if agent < agent_id:
+                        print(f'Agent{agent_id} is merging with Agent{agent}.1')
+                        location = (-location[0], -location[1])
+                        g1 = merge_graphs(self.graphs[agent], agent,
+                                        self.graphs[agent_id], agent_id, location)
+                        for agent in g1.current:
+                            self.graphs[agent] = g1
+                    else:
+                        print(f'Agent{agent} is merging with Agent{agent_id}.2')
+                        g1 = merge_graphs(self.graphs[agent_id], agent_id,
+                                        self.graphs[agent], agent, location)
+                        for agent in g1.current:
+                            self.graphs[agent] = g1
 
     def eliminate_agents(self, agent_id, location, potential):
         """
