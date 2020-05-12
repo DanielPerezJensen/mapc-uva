@@ -231,6 +231,7 @@ class Graph(object):
                     self.nodes[(x, y)] = Node((x, y))
 
         self.current = {agent_id: self.nodes[(0, 0)]}
+        self.things = {agent_id: {'goals':[], 'dispensers':{}, 'taskboards':[]}}
 
         for node in self.nodes.values():
             x, y = node.location
@@ -367,9 +368,14 @@ class Graph(object):
         things = msg['content']['percept']['things']
         cx, cy = self.get_current(agent_id).location
 
-        for option in terrain:
+        for option, (x, y) in terrain.items():
             for x, y in terrain[option]:
                 new_x, new_y = x + cx, y + cy
+
+                if option == "goal":
+                    if (new_x, new_y) not in self.things[agent_id]['goals']:
+                        self.things[agent_id]['goals'].append((new_x, new_y))
+                
                 if (new_x, new_y) in vision:
                     vision[(new_x, new_y)]['terrain'] = option
                 else:
@@ -377,6 +383,17 @@ class Graph(object):
 
         for thing in things:
             new_x, new_y = thing['x'] + cx, thing['y'] + cy
+
+            if thing['type'] == 'taskboard':
+                if (new_x, new_y) not in self.things[agent_id]['taskboards']:
+                    self.things[agent_id]['taskboards'].append((new_x, new_y))
+            elif thing['type'] == 'dispenser':
+                if thing['details'] not in self.things[agent_id]['blocks']:
+                    self.things[agent_id]['blocks'][thing['details']] = [(new_x, new_y)]
+                elif (new_x, new_y) not in self.things[agent_id]['blocks'][thing['details']]:
+                    self.things[agent_id]['blocks'][thing['details']].append((new_x, new_y))
+
+
             if (new_x, new_y) in vision:
                 vision[(new_x, new_y)]['things'].append((thing['type'],
                                                          thing['details']))
@@ -488,7 +505,7 @@ class Graph(object):
         """
         local_things = []
         cx, cy = self.get_current(agent_id).location
-        for node in self.get_local_nodes(offset=(0, 0)):
+        for node in self.get_local_nodes(agent_id, offset=(0, 0)):
             real_node = (node[0] + cx, node[1] + cy)
             local_things.append((node, self.nodes[real_node].get_things(step=self.step)))
         return local_things
@@ -613,6 +630,19 @@ def merge_graphs(g1, agent1, g2, agent2, offset):
     for agent in g2.current:
         temp = g2.get_current(agent).location
         g1.current[agent] = g1.nodes[(rx + temp[0], ry + temp[1])]
+
+    for thing in g2.things[agent2]:
+        if thing == 'dispensers':
+            for block in g2.things[agent2][thing]:
+                for x, y in g2.things[thing][block]:
+                    new_x, new_y = rx + x, ry + y
+                    if (new_x, new_y) not in g1.things[agent1]['dispensers'][block]:
+                        g1.things[agent1]['dispensers'][block].append((new_x, new_y))
+        else:
+            for x, y in g2.things[agent2][thing]:
+                new_x, new_y = rx + x, ry + y
+                if (new_x, new_y) not in g1.things[agent1][thing]:
+                    g1.things[agent1][thing].append((new_x, new_y))
 
     return g1
 
