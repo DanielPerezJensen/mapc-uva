@@ -461,10 +461,10 @@ class DStarLite(object):
             self.Km += self.heuristic(self.last_node, self.position)
 
             self.update_nodes({node for wallnode in new_obs
-                                for node in self.neighbors(wallnode)
-                                if (node not in self.graph.nodes or not\
-                                    self.graph.nodes[node]._is_obstacle(self.graph.step, 
-                                    self.graph.get_current(self.agent_id).location))})
+                              for node in self.neighbors(wallnode)
+                              if (node not in self.graph.nodes or not \
+                                  self.graph.nodes[node]._is_thing(self.graph.step, \
+                                      self.graph.get_current(self.agent_id).location))})
 
             self.compute_shortest_path()
 
