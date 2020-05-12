@@ -25,6 +25,7 @@ class SuperAgent(*AGENTS, BDIAgent):
         """
         Function that runs the agents.
         """
+        self.beliefs = self.strategist.get_graph(self._user_id)
         while True:
             # Receive a message.
             msg = self.receive_msg()
@@ -57,11 +58,6 @@ class SuperAgent(*AGENTS, BDIAgent):
                     action = selected_agent.explore(self, agent_id,
                                                     new_obstacle, new_empty,
                                                     new_agents, options)
-                    
-                    print('Current location: ' +
-                           str(self.strategist.graphs[agent_id].get_current(agent_id).location))
-
-                    action = self.move('w')
 
                     if not action:
                         action = self.skip()

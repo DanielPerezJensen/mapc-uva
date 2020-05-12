@@ -153,5 +153,5 @@ class Server(Thread):
         action: dict
             The action to be sent to the server.
         """
-        action['content']['id'] = request_id
-        return action
+        action[0]['content']['id'] = request_id
+        return action[0]
