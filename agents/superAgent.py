@@ -72,12 +72,9 @@ class SuperAgent(*AGENTS, BDIAgent):
                     # Provide timing information
                     if self._timer:
                         end_ms = int(round(time.time() * 1000))
-                        deadline = msg["content"]["deadline"]
-                        print(f"{COLORS[self._user_id % 15]}{self.name:<10}{END_COLOR} {f'done {deadline - end_ms} ms before deadline':<50} step {request_id}")
-
-
-
-
+                        diff = msg["content"]["deadline"] - end_ms
+                        time_relation = 'before' if diff >= 0 else 'after'
+                        print(f"{COLORS[self._user_id % 15]}{self.name:<10}{END_COLOR} {f'done {abs(diff)} ms {time_relation} deadline':<50} step {request_id}")
 
                 elif msg["type"] == "sim-start":
                     pass

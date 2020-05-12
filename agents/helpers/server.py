@@ -108,8 +108,8 @@ class Server(Thread):
         # In case a message is received, parse it into a dictionary.
         if len(msg) > 1:
             if self._print_json:
-                print(json.loads(msg))
-                # print(json.dumps(json.loads(msg), indent=2))
+                # print(json.loads(msg))
+                print(json.dumps(json.loads(msg), indent=2))
 
             return json.loads(msg)
         else:
