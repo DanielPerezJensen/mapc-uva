@@ -2,7 +2,7 @@ import sys
 from agents import SuperAgent
 from agents.strategist import Strategist
 
-n_agents = 1
+n_agents = 15
 a_list = []
 
 strategist = Strategist()

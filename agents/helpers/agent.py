@@ -68,8 +68,8 @@ class Agent(Server):
 
 
         if self.beliefs.nodes[new_loc]._is_obstacle():
-            clear_pos_x = (new_loc[0] - self.beliefs.current.location[0]) * 2
-            clear_pos_y = (new_loc[1] - self.beliefs.current.location[1]) * 2
+            clear_pos_x = (new_loc[0] - self.beliefs.get_current(agent_id).location[0]) * 2
+            clear_pos_y = (new_loc[1] - self.beliefs.get_current(agent_id).location[1]) * 2
             # Clear obstacle (invert flag because nav_to requires multiple
             action, _ = self.clear(clear_pos_x, clear_pos_y)
             return action, False

@@ -280,7 +280,7 @@ class Graph(object):
                     self.nodes[self.modulate((x, y))] = Node(self.modulate((x, y)))
 
         self.current = {agent_id: self.nodes[(0, 0)]}
-        self.things = {agent_id: {'goals':[], 'dispensers':{}, 'taskboards':[]}}
+        self.things = {'goals':[], 'dispensers':{}, 'taskboards':[]}
 
         for node in self.nodes.values():
             x, y = node.location
@@ -422,8 +422,8 @@ class Graph(object):
                 new_x, new_y = x + cx, y + cy
 
                 if option == "goal":
-                    if (new_x, new_y) not in self.things[agent_id]['goals']:
-                        self.things[agent_id]['goals'].append((new_x, new_y))
+                    if (new_x, new_y) not in self.things['goals']:
+                        self.things['goals'].append((new_x, new_y))
                 
                 if (new_x, new_y) in vision:
                     vision[(new_x, new_y)]['terrain'] = option
@@ -434,13 +434,13 @@ class Graph(object):
             new_x, new_y = thing['x'] + cx, thing['y'] + cy
 
             if thing['type'] == 'taskboard':
-                if (new_x, new_y) not in self.things[agent_id]['taskboards']:
-                    self.things[agent_id]['taskboards'].append((new_x, new_y))
+                if (new_x, new_y) not in self.things['taskboards']:
+                    self.things['taskboards'].append((new_x, new_y))
             elif thing['type'] == 'dispenser':
-                if thing['details'] not in self.things[agent_id]['blocks']:
-                    self.things[agent_id]['blocks'][thing['details']] = [(new_x, new_y)]
-                elif (new_x, new_y) not in self.things[agent_id]['blocks'][thing['details']]:
-                    self.things[agent_id]['blocks'][thing['details']].append((new_x, new_y))
+                if thing['details'] not in self.things['blocks']:
+                    self.things['blocks'][thing['details']] = [(new_x, new_y)]
+                elif (new_x, new_y) not in self.things['blocks'][thing['details']]:
+                    self.things['blocks'][thing['details']].append((new_x, new_y))
 
 
             if (new_x, new_y) in vision:
@@ -711,7 +711,7 @@ def merge_graphs(g1, agent1, g2, agent2, offset):
     rx, ry = g1_x + offset[0] - g2_x, g1_y + offset[1] - g2_y
 
     for x, y in g2.nodes:
-        new_x, new_y = self.modulate((rx + x, ry + y))
+        new_x, new_y = g1.modulate((rx + x, ry + y))
         if (new_x, new_y) in g1.nodes:
             # Get the most up-to-date terrain information
             if g1.nodes[(new_x, new_y)].get_terrain()[1] < \
@@ -741,20 +741,20 @@ def merge_graphs(g1, agent1, g2, agent2, offset):
 
     for agent in g2.current:
         temp = g2.get_current(agent).location
-        g1.current[agent] = g1.nodes[self.modulate((rx + temp[0], ry + temp[1]))]
+        g1.current[agent] = g1.nodes[g1.modulate((rx + temp[0], ry + temp[1]))]
 
-    for thing in g2.things[agent2]:
+    for thing in g2.things:
         if thing == 'dispensers':
-            for block in g2.things[agent2][thing]:
+            for block in g2.things[thing]:
                 for x, y in g2.things[thing][block]:
                     new_x, new_y = rx + x, ry + y
-                    if (new_x, new_y) not in g1.things[agent1]['dispensers'][block]:
-                        g1.things[agent1]['dispensers'][block].append((new_x, new_y))
+                    if (new_x, new_y) not in g1.things['dispensers'][block]:
+                        g1.things['dispensers'][block].append((new_x, new_y))
         else:
-            for x, y in g2.things[agent2][thing]:
+            for x, y in g2.things[thing]:
                 new_x, new_y = rx + x, ry + y
-                if (new_x, new_y) not in g1.things[agent1][thing]:
-                    g1.things[agent1][thing].append((new_x, new_y))
+                if (new_x, new_y) not in g1.things[thing]:
+                    g1.things[thing].append((new_x, new_y))
 
     return g1
 

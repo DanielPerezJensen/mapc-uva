@@ -47,8 +47,9 @@ class Strategist(object):
                 agent = local_agents[location][0]
                 # Merge agents
                 if agent in self.graphs[agent_id].current.keys():
-                    print(f'Agent{agent} is already merged with Agent{agent_id}.')
+                    pass#print(f'Agent{agent} is already merged with Agent{agent_id}.')
                 else:
+                    #print(f'Agent {COLORS[agent % 15]}{agent:<10}{END_COLOR} merged with Agent {COLORS[agent_id % 15]}{agent_id:<10}{END_COLOR}')
                     g1 = merge_graphs(self.graphs[agent_id], agent_id,
                                       self.graphs[agent], agent, location)
                     for agent in g1.current:
