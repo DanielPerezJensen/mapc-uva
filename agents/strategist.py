@@ -3,13 +3,12 @@ from agents.helpers.graph import Graph
 
 class Strategist(object):
     def __init__(self):
-        pass
+        self.agents = {}
+        self.graphs = {}
 
-    def insert_agents(self, a_list):
-        self.agents, self.graphs = {}, {}
-        for agent in a_list:
-            self.agents[agent._user_id] = agent
-            self.graphs[agent._user_id] = Graph(agent._user_id)
+    def insert_agents(self, agent):
+        self.agents[agent._user_id] = agent
+        self.graphs[agent._user_id] = Graph(agent._user_id)
     
     def get_graph(self, agent_id):
         return self.graphs[agent_id]

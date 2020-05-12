@@ -31,7 +31,6 @@ class Agent(Server):
         """
         super().__init__(user, pw, print_json)
         self.last_action_move = None
-        self.beliefs = self.strategist.get_graph(self._user_id)
 
         self.dstar = None
         self.steps = None
@@ -51,6 +50,7 @@ class Agent(Server):
         Returns the action.
         If at goal location or no path is possible, returns None.
         """
+        
         # Initialize or update
         if not self.dstar or self.dstar.goal != goal:
             self.dstar = DStarLite(self.beliefs, goal, agent_id)
@@ -464,10 +464,10 @@ class DStarLite(object):
             self.Km += self.heuristic(self.last_node, self.position)
 
             self.update_nodes({node for wallnode in new_obs
-                                for node in self.neighbors(wallnode)
-                                if (node not in self.graph.nodes or not\
-                                    self.graph.nodes[node]._is_obstacle(self.graph.step, 
-                                    self.graph.get_current(self.agent_id).location))})
+                              for node in self.neighbors(wallnode)
+                              if (node not in self.graph.nodes or not \
+                                  self.graph.nodes[node]._is_thing(self.graph.step,
+                                  self.graph.get_current(self.agent_id).location))})
 
             self.compute_shortest_path()
 
