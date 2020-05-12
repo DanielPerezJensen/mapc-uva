@@ -12,22 +12,25 @@ class Tester(Agent, BDIAgent):
         BDIAgent.__init__(self)
 
     def run(self):
-
         while True:
+            print(self.intention_queue)
             msg = self.receive_msg()
             if msg:
                 if msg["type"] == "request-action":
+                    if msg['content']['percept']['lastActionResult'] == 'failed_random':
+                        self.add_last_action()
                     self.beliefs.update(msg)
                     intention_addition = self.get_intention()
                     self.add_intention(*intention_addition)
                     action = self.execute_intention()
-                    request_id = self._get_request_id(msg)
-                    self.send_request(self._add_request_id(action, request_id))
+                    if action:
+                        request_id = self._get_request_id(msg)
+                        self.send_request(self._add_request_id(action, request_id))
+                    else:
+                        print("Done with action")
 
     def get_intention(self):
-
-        if True:
-            return self.test()
+        return self.test()
 
     def test(self):
         """
@@ -40,14 +43,16 @@ class Tester(Agent, BDIAgent):
         # TODO: Detect if blocking is possible somehow
 
         # TODO: Stand in between builder and goal state
-        return self.nav_to, ((1, 2),), tuple(), "preventMoving"
+        # return self.nav_to, ((1, 2),), tuple(), "preventMoving"
+        intentions = [self.nav_to]
+        args = [(1, 2)]
+        contexts = [tuple()]
+        descriptions = ["RetrievingBlock"]
 
+        return intentions, args, contexts, descriptions
 
 if __name__ == "__main__":
     a_list = []
     for i in range(1, 2):
         a_list.append(Tester(f"agentA{i}", "1"))
         a_list[i - 1].start()
-
-    for i in range(1, 2):
-        a_list[i - 1].run()

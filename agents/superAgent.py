@@ -9,20 +9,22 @@ import time
 
 
 AGENTS = [Attacker, Builder, Defender, Mapper, Spy]
-COLORS = ['\033[1;31m','\033[1;32m','\033[1;33m','\033[1;34m','\033[1;35m','\033[1;36m','\033[1;37m','\033[1;90m','\033[1;91m','\033[1;92m','\033[1;93m','\033[1;94m','\033[1;95m','\033[1;96m','\033[1;30m']
+COLORS = ['\033[1;31m','\033[1;32m','\033[1;33m','\033[1;34m','\033[1;35m',
+          '\033[1;36m','\033[1;37m','\033[1;90m','\033[1;91m','\033[1;92m',
+          '\033[1;93m','\033[1;94m','\033[1;95m','\033[1;96m','\033[1;30m']
 END_COLOR = '\033[0;0m'
 
 class SuperAgent(*AGENTS, BDIAgent):
 
-    def __init__(self, user, pw, print_json=False, timer=False):
+    def __init__(self, user, pw, strategist, print_json=False, timer=False):
         super().__init__(user, pw, print_json)
         self._timer = timer
+        self.strategist = strategist
 
     def run(self):
         """
-        Function that (currently) moves north every iteration
+        Function that runs the agents.
         """
-
         while True:
             # Receive a message.
             msg = self.receive_msg()
@@ -32,20 +34,34 @@ class SuperAgent(*AGENTS, BDIAgent):
                 if msg["type"] == "request-action":
                     # Get the request id
                     request_id = self._get_request_id(msg)
-
+                    agent_id = self._user_id
                     # Update beliefs
-                    new_obstacle, new_empty, new_agents = self.graph.update(msg)
+                    new_obstacle, new_empty, new_agents = \
+                        self.strategist.get_graph(agent_id).update(msg, agent_id)
                     # self.update_beliefs(new_obstacle, new_emtpy, new_agents)
 
                     # TODO: Listen to strategist thread for role
+                    local_agents = self.strategist.potential_agents(agent_id)
+                    self.strategist.merge_agents(agent_id, local_agents)
+                    #print(f'{agent_id} --> {local_agents}')
+                    #print(f'AgentA{agent_id} is paired with: {self.strategist.get_graph_pairs(agent_id)}')
+                    #print(len(self.strategist.get_all_pairs()))
 
                     # TODO: Set role as chosen by strategist
 
-                    selected_agent = AGENTS[1] # Builder, example 
+                    selected_agent = AGENTS[3] # Builder, example 
 
                     # TODO: Reasoning according to selected role
                     
-                    action = selected_agent.get_action(self, new_obstacle, new_empty, new_agents) # example
+                    options = ['single', 'random', 'east']
+                    action = selected_agent.explore(self, agent_id,
+                                                    new_obstacle, new_empty,
+                                                    new_agents, options)
+                    
+                    print('Current location: ' +
+                           str(self.strategist.graphs[agent_id].get_current(agent_id).location))
+
+                    action = self.move('w')
 
                     if not action:
                         action = self.skip()
