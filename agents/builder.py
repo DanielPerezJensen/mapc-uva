@@ -79,8 +79,8 @@ class Builder(Agent, BDIAgent):
             if not goal:
                 return tuple()
 
-            intentions = [self.nav_to]
-            args = [(taskboard, self._user_id, new_obs, True)]
+            intentions = [self.nav_to, self.accept, self.nav_to, self.request]
+            args = [(taskboard, self._user_id, new_obs, True), (task['name']), (dispensers[0]), (self.beliefs.get_direction(self._user_id, self.beliefs.get_current(self._user_id).location)]
             
             # find shortest path from taskboard and dispenser, to goal.
             self.beliefs.things['dispensers']
