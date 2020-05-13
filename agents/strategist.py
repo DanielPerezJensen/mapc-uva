@@ -3,9 +3,11 @@ from agents.helpers.graph import Graph
 
 class Strategist(object):
     def __init__(self):
-        pass
+        self.queue = []
+        self.queue_flag = False
 
     def insert_agents(self, a_list):
+        self.n_agents = len(a_list)
         self.agents, self.graphs = {}, {}
         for agent in a_list:
             self.agents[agent._user_id] = agent
@@ -53,6 +55,7 @@ class Strategist(object):
                 # Merge agents
                 if self.graphs[agent] != self.graphs[agent_id]:
                     if agent < agent_id:
+                        location = (-location[0], -location[1])
                         g1 = merge_graphs(self.graphs[agent], agent,
                                           self.graphs[agent_id], agent_id,
                                           location)
