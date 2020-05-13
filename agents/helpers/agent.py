@@ -33,8 +33,9 @@ class Agent(Server):
         self.last_action_move = None
         self.dstar = None
         self.steps = None
+        self.beliefs = Graph(self._user_id)
 
-    def nav_to(self, goal, agent_id, new_obs=[]):
+    def nav_to(self, goal, agent_id, new_obs, adjacent=False):
         """
         Navigate to coordinates in the agents local reference frame.
         The first call to nav_to does not require new_obs.
@@ -43,8 +44,13 @@ class Agent(Server):
         ----------
         goal: tuple
             x and y coordinates of the goal location.
+        agent_id: int
+            id of the agent.
         new_obs: list
             A list of the new observations.
+        adjacent: bool
+            If True, navigates to a block next to the goal location,
+            e.g. for dispensers, taskboards etc.
 
         Returns the action.
         If at goal location or no path is possible, returns None.
@@ -61,6 +67,10 @@ class Agent(Server):
 
         # Check if path is impossible or already at goal location
         if not new_loc:
+            return "", True
+        
+        # Check if next to goal location
+        if adjacent and new_loc == goal:
             return "", True
 
         direction = self.beliefs.get_direction(agent_id, new_loc)

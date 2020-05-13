@@ -6,10 +6,14 @@ class Strategist(object):
         self.agents = {}
         self.graphs = {}
 
-    def insert_agents(self, a_list):
-        for agent in a_list:
-            self.agents[agent._user_id] = agent
-            self.graphs[agent._user_id] = Graph(agent._user_id)
+    def insert_agents(self, agents):
+        if isinstance(agents, list):
+            for agent in agents:
+                self.agents[agent._user_id] = agent
+                self.graphs[agent._user_id] = Graph(agent._user_id)
+        else:
+            self.agents[agents._user_id] = agents
+            self.graphs[agents._user_id] = Graph(agents._user_id)
     
     def get_graph(self, agent_id):
         return self.graphs[agent_id]

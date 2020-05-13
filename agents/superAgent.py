@@ -26,7 +26,7 @@ class SuperAgent(*AGENTS, BDIAgent):
         """
         Function that runs the agents.
         """
-        lock = threading.Lock()
+        # lock = threading.Lock()
         self.beliefs = self.strategist.get_graph(self._user_id)
         while True:
             # Receive a message.
@@ -37,39 +37,35 @@ class SuperAgent(*AGENTS, BDIAgent):
                 if msg["type"] == "request-action":
                     # Get the request id
                     request_id = self._get_request_id(msg)
-                    agent_id = self._user_id
+
                     # Update beliefs
-                    
-                    lock.acquire()
                     new_obstacle, new_empty, new_agents = \
-                        self.strategist.get_graph(agent_id).update(msg, agent_id)
-                    lock.release()
-                    # self.update_beliefs(new_obstacle, new_emtpy, new_agents)
+                        self.strategist.get_graph(self._user_id).update(msg, self._user_id)
 
                     # TODO: Listen to strategist thread for role
-
-                    lock.acquire()
-                    local_agents = self.strategist.potential_agents(agent_id)
-                    lock.release()
-                    print(f'{agent_id} --> {local_agents}')
+                    # local_agents = self.strategist.potential_agents(agent_id)
+                    # self.strategist.merge_agents(agent_id, local_agents)
+                    #print(f'{agent_id} --> {local_agents}')
                     #print(f'AgentA{agent_id} is paired with: {self.strategist.get_graph_pairs(agent_id)}')
                     
-                    lock.acquire()
-                    self.strategist.merge_agents(agent_id, local_agents)
-                    lock.release()
+                    # lock.acquire()
+                    # self.strategist.merge_agents(agent_id, local_agents)
+                    # lock.release()
                     
                     #print(len(self.strategist.get_all_pairs()))
 
                     # TODO: Set role as chosen by strategist
 
-                    selected_agent = AGENTS[3] # Builder, example 
+                    selected_agent = AGENTS[1] # Builder, example 
 
                     # TODO: Reasoning according to selected role
                     
-                    options = ['single', 'random', 'east']
-                    action = selected_agent.explore(self, agent_id,
-                                                    new_obstacle, new_empty,
-                                                    new_agents, options)
+                    # options = ['single', 'random', 'east']
+                    # action = selected_agent.explore(self, agent_id,
+                    #                                 new_obstacle, new_empty,
+                    #                                 new_agents, options)
+
+                    action = selected_agent.get_action(self, new_obstacle, new_empty, new_agents)
 
                     if not action:
                         action = self.skip()
