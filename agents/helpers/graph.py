@@ -282,6 +282,7 @@ class Graph(object):
 
         self.current = {agent_id: self.nodes[(0, 0)]}
         self.things = {'goals':[], 'dispensers':{}, 'taskboards':[]}
+        self.new_obs = {'obstacles':[], 'empty': [], 'agents': []}
 
         for node in self.nodes.values():
             x, y = node.location
@@ -350,8 +351,8 @@ class Graph(object):
 
                 self.nodes[node].set_terrain(vision[node]['terrain'], step)
                 self.nodes[node].add_things(vision[node]['things'], step)
-
-        return new_obstacles, new_empty, self.get_new_agents(vision, agent_id)
+        
+        self.new_obs = {'obstacles': new_obstacles, 'empty': new_empty, 'agents': self.get_new_agents(vision, agent_id)}
 
     def update_current(self, msg, agent_id):
         """

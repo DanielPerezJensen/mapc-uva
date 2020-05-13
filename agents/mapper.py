@@ -12,8 +12,7 @@ class Mapper(Agent):
         else:
             pass # Visit the areas that haven't been visited in a while
 
-    def explore(self, agent_id, new_obstacle, new_empty, new_agents, 
-            options=['single', 'random', 'east']):
+    def explore(self, agent_id, options=['single', 'random', 'east']):
         self.options = options
         if self.options[0] == 'multi':
             """
@@ -25,8 +24,9 @@ class Mapper(Agent):
             if teammate:
                 action = self.multi_agent_explore(agent_id, teammate=teammate)
                 return action
-    
-        action = self.single_agent_explore(agent_id, new_obstacle + new_agents)
+        new_obs = [obs for sublist in self.beliefs.new_obs['obstacles'] + 
+                    self.beliefs.new_obs['agents'] for obs in sublist]
+        action = self.single_agent_explore(agent_id, new_obs)
         return action
 
     def single_agent_explore(self, agent_id, new_obs):

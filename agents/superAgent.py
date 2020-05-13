@@ -41,8 +41,7 @@ class SuperAgent(*AGENTS, BDIAgent):
                     # Update beliefs
                     
                     lock.acquire()
-                    new_obstacle, new_empty, new_agents = \
-                        self.strategist.get_graph(agent_id).update(msg, agent_id)
+                    self.strategist.get_graph(agent_id).update(msg, agent_id)
                     lock.release()
                     # self.update_beliefs(new_obstacle, new_emtpy, new_agents)
 
@@ -67,9 +66,7 @@ class SuperAgent(*AGENTS, BDIAgent):
                     # TODO: Reasoning according to selected role
                     
                     options = ['single', 'random', 'east']
-                    action = selected_agent.explore(self, agent_id,
-                                                    new_obstacle, new_empty,
-                                                    new_agents, options)
+                    action = selected_agent.explore(self, agent_id, options)
 
                     if not action:
                         action = self.skip()
