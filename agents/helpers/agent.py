@@ -35,7 +35,7 @@ class Agent(Server):
         self.steps = None
         self.beliefs = Graph(self._user_id)
 
-    def nav_to(self, goal, agent_id, new_obs, adjacent=False):
+    def nav_to(self, goal, agent_id, adjacent=False):
         """
         Navigate to coordinates in the agents local reference frame.
         The first call to nav_to does not require new_obs.
@@ -60,7 +60,7 @@ class Agent(Server):
         if not self.dstar or self.dstar.goal != goal:
             self.dstar = DStarLite(self.beliefs, goal, agent_id)
         else:
-            self.dstar.update(self.beliefs, new_obs)
+            self.dstar.update(self.beliefs)
         
         # Get the new direction
         new_loc = self.dstar.move_to_goal()
@@ -465,6 +465,7 @@ class DStarLite(object):
         # Update observations
         self.graph = graph
         self.position = graph.get_current(self.agent_id).location
+        new_obs = [obs for sublist in graph.new_obs.values() for obs in sublist]
 
         # Update the path if there are new observations
         if new_obs:

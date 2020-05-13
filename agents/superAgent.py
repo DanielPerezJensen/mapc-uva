@@ -39,8 +39,11 @@ class SuperAgent(*AGENTS, BDIAgent):
                     request_id = self._get_request_id(msg)
 
                     # Update beliefs
-                    new_obstacle, new_empty, new_agents = \
-                        self.strategist.get_graph(self._user_id).update(msg, self._user_id)
+                    
+                    lock.acquire()
+                    self.strategist.get_graph(agent_id).update(msg, self._user_id)
+                    lock.release()
+                    # self.update_beliefs(new_obstacle, new_emtpy, new_agents)
 
                     # TODO: Listen to strategist thread for role
                     # local_agents = self.strategist.potential_agents(agent_id)
@@ -65,7 +68,7 @@ class SuperAgent(*AGENTS, BDIAgent):
                     #                                 new_obstacle, new_empty,
                     #                                 new_agents, options)
 
-                    action = selected_agent.get_action(self, new_obstacle, new_empty, new_agents)
+                    action = selected_agent.get_action(self)
 
                     if not action:
                         action = self.skip()

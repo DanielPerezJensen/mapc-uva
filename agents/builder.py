@@ -28,7 +28,7 @@ class Builder(Agent, BDIAgent):
                     else:
                         print("Done with action")
 
-    def get_intention(self, n_o, n_e, n_a):
+    def get_intention(self):
 
         if not hasattr(self, 'ready'): 
             self.debug()
@@ -36,7 +36,7 @@ class Builder(Agent, BDIAgent):
         if len(self.beliefs.tasks):
             # TODO: do actual task selection
             task = self.select_task()
-            return  self.do_task(task, n_o + n_e + n_a)
+            return  self.do_task(task)
         
         return tuple()
 
@@ -54,7 +54,7 @@ class Builder(Agent, BDIAgent):
         return self.beliefs.tasks[0]
 
 
-    def do_task(self, task, new_obs):
+    def do_task(self, task):
         if self.current_task != task['name']:
             intentions, args, contexts, descriptions = [], [], [], []
 
@@ -79,6 +79,7 @@ class Builder(Agent, BDIAgent):
             if not goal:
                 return tuple()
 
+            new_obs = [obs for sublist in self.beliefs.new_obs.values() for obs in sublist]
             intentions = [self.nav_to, self.accept, self.nav_to, self.request]
             args = [(taskboard, self._user_id, new_obs, True), (task['name']), (dispensers[0]), (self.beliefs.get_direction(self._user_id, self.beliefs.get_current(self._user_id).location)]
             
@@ -152,4 +153,4 @@ if __name__ == "__main__":
     a_list = []
     for i in range(1, 2):
         a_list.append(Builder(f"agentA{i}", "1"))
-        a_list[i - 1].start()
+        a_list[-1].start()
