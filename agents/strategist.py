@@ -19,7 +19,11 @@ class Strategist(object):
             return self.agents[agent_id]
 
     def get_graph_pairs(self, agent_id):
-        return list(self.graphs[agent_id].current.keys())
+        pair = []
+        for agent in self.graphs[agent_id].current.keys():
+            if self.graphs[agent] == self.graphs[agent_id]:
+                pair.append(agent)
+        return pair
     
     def get_all_pairs(self):
         n = list(self.agents.keys())
@@ -47,13 +51,26 @@ class Strategist(object):
             if len(local_agents[location]) == 1:
                 agent = local_agents[location][0]
                 # Merge agents
-                if agent in self.graphs[agent_id].current.keys():
-                    print(f'Agent{agent} is already merged with Agent{agent_id}.')
-                else:
-                    g1 = merge_graphs(self.graphs[agent_id], agent_id,
-                                      self.graphs[agent], agent, location)
-                    for agent in g1.current:
-                        self.graphs[agent] = g1
+                if self.graphs[agent] != self.graphs[agent_id]:
+                    if agent < agent_id:
+                        g1 = merge_graphs(self.graphs[agent], agent,
+                                          self.graphs[agent_id], agent_id,
+                                          location)
+                        
+                        for a in self.graphs[agent_id].current:
+                            self.graphs[a] = g1
+
+                        for a in g1.current:
+                            self.graphs[a] = g1
+                    else:
+                        g1 = merge_graphs(self.graphs[agent_id], agent_id,
+                                          self.graphs[agent], agent, location)
+                        
+                        for a in self.graphs[agent].current:
+                            self.graphs[a] = g1
+
+                        for a in g1.current:
+                            self.graphs[a] = g1
 
     def eliminate_agents(self, agent_id, location, potential):
         """
