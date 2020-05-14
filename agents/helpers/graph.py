@@ -123,7 +123,8 @@ class Node(object):
         Arguments
         ---------
         step: int
-            The step from which the information will be returned. Default is -1.
+            The step from which the information will be returned.
+            Default is -1.
         """
         if step >= 0:
             if step in self.things.keys():
@@ -229,7 +230,7 @@ class Node(object):
         # check for obstacles
         if self.terrain[0] == 'obstacle':
             return True
-        
+
         return False
 
     def _is_thing(self, step, agent_location, things=['block', 'entity']):
@@ -245,7 +246,7 @@ class Node(object):
         things: list of str
             List of things to include from {block, entity, dispenser, marker}.
         """
-        
+
         if agent_location == self.location:
             return False
 
@@ -267,7 +268,7 @@ class Graph(object):
         Initialise the graph and create a dictionary to store the nodes based
         on the coordinates of the agents initial position (will acts as
         the (0, 0) coordinate) and add the neighbouring nodes to each node.
-        The graph also saves the current step, current node and the 
+        The graph also saves the current step, current node and the
         start node (0, 0).
         """
         self.nodes = {}
@@ -281,7 +282,7 @@ class Graph(object):
                     self.nodes[self.modulate((x, y))] = Node(self.modulate((x, y)))
 
         self.current = {agent_id: self.nodes[(0, 0)]}
-        self.things = {'goals':[], 'dispensers':{}, 'taskboards':[]}
+        self.things = {'goals': [], 'dispensers': {}, 'taskboards': []}
 
         for node in self.nodes.values():
             x, y = node.location
@@ -443,7 +444,6 @@ class Graph(object):
                 elif (new_x, new_y) not in self.things['dispensers'][thing['details']]:
                     self.things['dispensers'][thing['details']].append((new_x, new_y))
 
-
             if (new_x, new_y) in vision:
                 vision[(new_x, new_y)]['things'].append((thing['type'],
                                                          thing['details']))
@@ -528,7 +528,7 @@ class Graph(object):
 
     def get_local_agents(self, agent_id, team='A'):
         """
-        Return the location of the agents from a certain team within 
+        Return the location of the agents from a certain team within
         the agent's own local vision.
 
         Return a list of tuple coordinates.
@@ -545,14 +545,14 @@ class Graph(object):
                 real_node = self.modulate((node[0] + cx, node[1] + cy))
                 for thing in self.nodes[real_node].get_things(step=self.step):
                     if thing[0] == 'entity' and thing[1] == team:
-                        local_agents.append(node)                    
+                        local_agents.append(node)
         return local_agents
 
     def get_local_things(self, agent_id):
         """
         Return the location and things of the nodes in the agent's local vision.
-        The returned item is a list of tuples. The tuples contain the 
-        coordinates of the thing relative to the agent and the things 
+        The returned item is a list of tuples. The tuples contain the
+        coordinates of the thing relative to the agent and the things
         themselves, respectively.
         """
         local_things = []
@@ -662,7 +662,7 @@ class Graph(object):
                 if node != self.modulate(node):
                     if self.nodes[node].get_terrain()[1] > \
                             self.nodes[self.modulate(node)].get_terrain()[1]:
-                        self.nodes[self.modulate(node)].set_terrain(self.nodes[node].get_terrain()[0], 
+                        self.nodes[self.modulate(node)].set_terrain(self.nodes[node].get_terrain()[0],
                                                                     self.nodes[node].get_terrain()[1])
 
                     for things in self.nodes[node].get_things():
@@ -866,7 +866,8 @@ if __name__ == '__main__':
                 "attached":[],\
                 "disabled":false,\
                 "terrain":{\
-                    "obstacle":[[0,3],[1,4],[-1,3],[0,4],[-2,3],[-1,4],[0,5],[5,0],[4,1]]},\
+                    "obstacle":[[0,3],[1,4],[-1,3],[0,4],[-2,3],[-1,4],[0,5],\
+                        [5,0],[4,1]]},\
                 "lastActionResult":"success",\
                 "tasks":[],\
                 "energy":300},\
