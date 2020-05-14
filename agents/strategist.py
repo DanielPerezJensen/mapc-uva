@@ -3,8 +3,7 @@ from agents.helpers.graph import Graph
 
 class Strategist(object):
     def __init__(self):
-        self.queue = []
-        self.queue_flag = False
+        pass
 
     def insert_agents(self, a_list):
         self.n_agents = len(a_list)

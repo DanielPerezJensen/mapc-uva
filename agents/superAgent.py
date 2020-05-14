@@ -6,7 +6,7 @@ from .mapper import Mapper
 from .spy import Spy
 import json
 import time
-import threading
+from agents.helpers.graph import merge_graphs
 
 
 AGENTS = [Attacker, Builder, Defender, Mapper, Spy]
@@ -26,11 +26,9 @@ class SuperAgent(*AGENTS, BDIAgent):
         """
         Function that runs the agents.
         """
-        lock = threading.Lock()
         while True:
             # Receive a message.
             msg = self.receive_msg()
-            self.strategist.queue_flag = False
 
             if msg:
                 # Parse the response.
@@ -41,33 +39,17 @@ class SuperAgent(*AGENTS, BDIAgent):
                     # Update beliefs
                     new_obstacle, new_empty, new_agents = \
                         self.strategist.get_graph(agent_id).update(msg, agent_id)
-                    print(f'Agent{agent_id}: Map updated in {msg["content"]["step"]}')
-                    self.strategist.queue.append(agent_id)
-                    print(self.strategist.queue)
-                    while True:
-                        if len(self.strategist.queue) == self.strategist.n_agents or \
-                                self.strategist.queue_flag == True:
-                            self.strategist.queue_flag = True
-                            self.strategist.queue = []
-                            break
-
+                    print(f'{agent_id} updated')
                     
-                    
+                    if msg['content']['step'] == 0 and agent_id == 1:
+                        print(1)
+                        g1 = merge_graphs(self.strategist.get_graph(agent_id), 
+                                          agent_id, self.strategist.get_graph(3),
+                                          3, (1, 0))
+                        self.strategist.graphs[1] = g1
+                        self.strategist.graphs[3] = g1
 
 
-
-                    # TODO: Listen to strategist thread for role
-                    time.sleep(1)
-
-                    lock.acquire()
-                    print(f'Agent{agent_id}: Start merging in {msg["content"]["step"]}')
-                    local_agents = self.strategist.potential_agents(agent_id)
-                    #print(f'{agent_id} --> {local_agents}')
-                    self.strategist.merge_agents(agent_id, local_agents)
-                    #print(f'AgentA{agent_id} is paired with: {self.strategist.get_graph_pairs(agent_id)}')
-                    #print(f'Agent{agent_id}:\n{self.strategist.get_graph(agent_id).get_current(agent_id)}')
-                    print(f'Agent{agent_id}: Stop merging in {msg["content"]["step"]}')
-                    lock.release()
 
                     # TODO: Set role as chosen by strategist
 
