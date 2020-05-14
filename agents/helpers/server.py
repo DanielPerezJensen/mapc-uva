@@ -30,7 +30,7 @@ class Server(Thread):
         """
         super().__init__(name=user)
         self._user = user
-        self._user_id = int((user[-2] if user[-2].isdigit() else "") +
+        self._user_id = int((user[-2] if user[-2].isdigit() else "") + 
                             user[-1])
         self._pw = pw
         self._print_json = print_json

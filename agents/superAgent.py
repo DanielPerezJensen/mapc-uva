@@ -38,8 +38,7 @@ class SuperAgent(*AGENTS, BDIAgent):
                     agent_id = self._user_id
 
                     # Update beliefs
-                    new_obstacle, new_empty, new_agents = \
-                        self.beliefs.update(msg, agent_id)
+                    self.beliefs.update(msg, agent_id)
 
                     # TODO: Listen to strategist thread for role
 
@@ -51,9 +50,8 @@ class SuperAgent(*AGENTS, BDIAgent):
 
                     # Makes the agents walk around randomly
                     options = ['single', 'random', 'east']
-                    action = selected_agent.explore(self, agent_id,
-                                                    new_obstacle, new_empty,
-                                                    new_agents, options)
+                    action = selected_agent.explore(self, agent_id, options)
+                    #action = self.skip()
 
                     # Send action to server
                     self.send_request(self._add_request_id(action[0],
