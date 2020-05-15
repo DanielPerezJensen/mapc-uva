@@ -352,9 +352,10 @@ class Graph(object):
 
                 self.nodes[node].set_terrain(vision[node]['terrain'], step)
                 self.nodes[node].add_things(vision[node]['things'], step)
-
+        
+        self.new_obs = {'obstacles': new_obstacles, 'empty': new_empty,
+                        'agents': self.get_new_agents(vision, agent_id)}
         self.tasks = msg["content"]["percept"]["tasks"]
-        self.new_obs = {'obstacles': new_obstacles, 'empty': new_empty, 'agents': self.get_new_agents(vision, agent_id)}
 
     def update_current(self, msg, agent_id):
         """
