@@ -148,8 +148,6 @@ class Builder(Agent, BDIAgent):
         """
         Turn the agent to have the correct orientation and submit the task.
         """
-        intentions, args, contexts, descriptions = [], [], [], []
-
         # TODO: make it work for more than one attached block
 
         turns = self._required_turns(pattern)
