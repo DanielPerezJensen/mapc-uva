@@ -5,13 +5,13 @@ from collections import deque
 class BDIAgent():
     def __init__(self):
         self.intention_queue = deque()
-        self.Template = namedtuple('Intention', ['intention', 'args',
+        self.Template = namedtuple('Intention', ['method', 'args',
                                                  'context', 'description',
                                                  'primitive'])
         self.previous_additions = None
         self.last_intention = None
 
-    def add_intention(self, intentions, args, contexts,
+    def add_intention(self, methods, args, contexts,
                       descriptions, primitives):
         """
         Adds an intention (function call) with given args and context
@@ -22,8 +22,8 @@ class BDIAgent():
             contexts: list of contexts
             descriptions: list of descriptions
         """
-        additions = [self.Template(i, a, c, d, p) for i, a, c, d, p
-                     in zip(intentions, args, contexts,
+        additions = [self.Template(m, a, c, d, p) for m, a, c, d, p
+                     in zip(methods, args, contexts,
                             descriptions, primitives)]
 
         if additions != self.previous_additions:
@@ -49,10 +49,10 @@ class BDIAgent():
                 a non-primitive intention that must be reduced
         """
         method, args, _, _, _ = intention
-        intentions, args, contexts, descriptions, primitives = method(*args)
+        methods, args, contexts, descriptions, primitives = method(*args)
 
-        reduced_additions = [self.Template(i, a, c, d, p) for i, a, c, d, p
-                             in zip(intentions, args, contexts,
+        reduced_additions = [self.Template(m, a, c, d, p) for m, a, c, d, p
+                             in zip(methods, args, contexts,
                                     descriptions, primitives)]
 
         # Reverse the intentions because extendleft reverses the intentions
