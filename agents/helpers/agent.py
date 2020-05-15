@@ -244,7 +244,6 @@ class Agent(Server):
         # Create and return the request.
         return self._create_action("submit", task), True
 
-
     def clear(self, x, y):
         """
         Prepare to clear an area (a target position and the 4 adjacent cells).
@@ -450,7 +449,7 @@ class DStarLite(object):
         else:
             return None
 
-    def update(self, graph, new_obs):
+    def update(self, graph):
         """
         Update the path if necessary.
 
