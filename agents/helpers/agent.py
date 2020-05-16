@@ -61,7 +61,7 @@ class Agent(Server):
 
         # Check if path is impossible or already at goal location
         if not new_loc:
-            return "", True
+            return None
 
         direction = self.beliefs.get_direction(agent_id, new_loc)
 
@@ -71,13 +71,13 @@ class Agent(Server):
             clear_pos_y = (new_loc[1] -
                            self.beliefs.get_current(agent_id).location[1]) * 2
             # Clear obstacle (invert flag because nav_to requires multiple
-            action, _ = self.clear(clear_pos_x, clear_pos_y)
-            return action, False
+            action = self.clear(clear_pos_x, clear_pos_y)
+            return action
         else:
             # Move to location (invert flag because nav_to requires
             # multiple moves)
-            action, _ = self.move(direction)
-            return action, False
+            action = self.move(direction)
+            return action
 
     def quit_nav(self):
         """
@@ -93,7 +93,7 @@ class Agent(Server):
         self.last_action_move = ""
 
         # Create and return the request
-        return self._create_action("skip"), True
+        return self._create_action("skip")
 
     def move(self, direction):
         """
@@ -109,7 +109,7 @@ class Agent(Server):
         self.last_action_move = direction
 
         # Create and return the request.
-        return self._create_action("move", direction), True
+        return self._create_action("move", direction)
 
     def attach(self, direction):
         """
@@ -126,7 +126,7 @@ class Agent(Server):
         self.last_action_move = ""
 
         # Create and return the request.
-        return self._create_action("attach", direction), True
+        return self._create_action("attach", direction)
 
     def detach(self, direction):
         """
@@ -143,7 +143,7 @@ class Agent(Server):
         self.last_action_move = ""
 
         # Create and return the request.
-        return self._create_action("detach", direction), True
+        return self._create_action("detach", direction)
 
     def rotate(self, direction):
         """
@@ -160,7 +160,7 @@ class Agent(Server):
         self.last_action_move = ""
 
         # Create and return the request.
-        return self._create_action("rotate", direction), True
+        return self._create_action("rotate", direction)
 
     def connect(self, agent, x, y):
         """
@@ -179,7 +179,7 @@ class Agent(Server):
         self.last_action_move = ""
 
         # Create and return the request.
-        return self._create_action("connect", agent, str(x), str(y)), True
+        return self._create_action("connect", agent, str(x), str(y))
 
     def disconnect(self, x1, y1, x2, y2):
         """
@@ -201,7 +201,7 @@ class Agent(Server):
 
         # Create and return the request.
         return self._create_action("disconnect", str(x1), str(y1),
-                                   str(x2), str(y2)), True
+                                   str(x2), str(y2))
 
     def request(self, direction):
         """
@@ -219,7 +219,7 @@ class Agent(Server):
         self.last_action_move = ""
 
         # Create and return the request.
-        return self._create_action("request", direction), True
+        return self._create_action("request", direction)
 
     def submit(self, task):
         """
@@ -235,7 +235,7 @@ class Agent(Server):
         self.last_action_move = ""
 
         # Create and return the request.
-        return self._create_action("submit", task), True
+        return self._create_action("submit", task)
 
     def clear(self, x, y):
         """
@@ -255,7 +255,7 @@ class Agent(Server):
         self.last_action_move = ""
 
         # Create and return the request.
-        return self._create_action("clear", x, y), True
+        return self._create_action("clear", x, y)
 
     def accept(self, task):
         """
@@ -274,7 +274,7 @@ class Agent(Server):
         self.last_action_move = ""
 
         # Create and return the request.
-        return self._create_action("accept", task), True
+        return self._create_action("accept", task)
 
     # Helper functions
     @staticmethod

@@ -4,10 +4,7 @@ from .builder import Builder
 from .defender import Defender
 from .mapper import Mapper
 from .spy import Spy
-import json
 import time
-import threading
-
 
 AGENTS = [Attacker, Builder, Defender, Mapper, Spy]
 COLORS = ['\033[1;31m', '\033[1;32m', '\033[1;33m', '\033[1;34m', '\033[1;35m',
@@ -20,6 +17,7 @@ class SuperAgent(*AGENTS, BDIAgent):
 
     def __init__(self, user, pw, print_json=False, timer=False):
         super().__init__(user, pw, print_json)
+        BDIAgent.__init__(self)
         self._timer = timer
 
     def run(self):
@@ -33,29 +31,43 @@ class SuperAgent(*AGENTS, BDIAgent):
             if msg:
                 # Parse the response.
                 if msg["type"] == "request-action":
-                    # Get the request id
-                    request_id = self._get_request_id(msg)
-                    agent_id = self._user_id
+                    self.beliefs.update(msg, self._user_id)
 
-                    # Update beliefs
-                    self.beliefs.update(msg, agent_id)
-
+                    # Get agent type
                     # TODO: Listen to strategist thread for role
-
                     # TODO: Set role as chosen by strategist
+                    agent_type = AGENTS[1]
 
-                    selected_agent = AGENTS[3]  # Builder, example
+                    # Read last action if it randomly failed
+                    if msg['content']['percept']['lastActionResult'] == \
+                            'failed_random' and self.last_intention:
+                        if self.last_intention.method.__name__ != "nav_to":
+                            self.add_last_intention()
 
-                    # TODO: Reasoning according to selected role
+                    # If intention queue is empty add intention (temporary)
+                    if not self.intention_queue:
+                        # Get intention from agent_type
+                        intention_addition = agent_type.get_intention(self)
 
-                    # Makes the agents walk around randomly
-                    options = ['single', 'random', 'east']
-                    action = selected_agent.explore(self, agent_id, options)
-                    #action = self.skip()
+                        self.add_intention(*intention_addition)
 
-                    # Send action to server
-                    self.send_request(self._add_request_id(action[0],
-                                                           request_id))
+                    action = self.execute_intention()
+                    if action:
+                        request_id = self._get_request_id(msg)
+                        self.send_request(self._add_request_id(action,
+                                          request_id))
+                    else:
+                        print("Done with action")
+
+
+                    # # Makes the agents walk around randomly
+                    # options = ['single', 'random', 'east']
+                    # action = selected_agent.explore(self, agent_id, options)
+                    # #action = self.skip()
+                    #
+                    # # Send action to server
+                    # self.send_request(self._add_request_id(action[0],
+                    #                                        request_id))
 
                     # Provide timing information
                     if self._timer:
