@@ -17,15 +17,17 @@ class Tester(Agent, BDIAgent):
             msg = self.receive_msg()
             if msg:
                 if msg["type"] == "request-action":
-                    if msg['content']['percept']['lastActionResult'] == 'failed_random':
+                    if msg['content']['percept']['lastActionResult'] == \
+                            'failed_random':
                         self.add_last_action()
-                    self.beliefs.update(msg)
+                    self.beliefs.update(msg, self._user_id)
                     intention_addition = self.get_intention()
                     self.add_intention(*intention_addition)
                     action = self.execute_intention()
                     if action:
                         request_id = self._get_request_id(msg)
-                        self.send_request(self._add_request_id(action, request_id))
+                        self.send_request(self._add_request_id(action,
+                                          request_id))
                     else:
                         print("Done with action")
 
@@ -45,7 +47,7 @@ class Tester(Agent, BDIAgent):
         # TODO: Stand in between builder and goal state
         # return self.nav_to, ((1, 2),), tuple(), "preventMoving"
         intentions = [self.nav_to]
-        args = [(1, 2)]
+        args = [((1, 2), self._user_id)]
         contexts = [tuple()]
         descriptions = ["RetrievingBlock"]
 

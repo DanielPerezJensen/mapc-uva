@@ -1,161 +1,93 @@
-from agents.helpers.graph import merge_graphs
-from agents.helpers.graph import Graph
+from .helpers import Server
+from .helpers.graph import Graph
+from queue import Queue
+import threading
+import time
 
-class Strategist(object):
-    def __init__(self):
-        self.agents = {}
-        self.graphs = {}
 
-    def insert_agents(self, a_list):
-        for agent in a_list:
-            self.agents[agent._user_id] = agent
-            self.graphs[agent._user_id] = Graph(agent._user_id)
-    
-    def get_graph(self, agent_id):
-        return self.graphs[agent_id]
-
-    def get_agent_info(self, agent_id):
-        if self.agents[agent_id]:
-            return self.agents[agent_id]
-
-    def get_graph_pairs(self, agent_id):
-        pair = []
-        for agent in self.graphs[agent_id].current.keys():
-            if self.graphs[agent] == self.graphs[agent_id]:
-                pair.append(agent)
-        return pair
-    
-    def get_all_pairs(self):
-        n = list(self.agents.keys())
-        pairs = []
-        while n != []:
-            temp = self.get_graph_pairs(n[0])
-            pairs.append(temp)
-            n = [x for x in n if x not in temp]
-        return pairs
-
-    def merge_agents(self, agent_id, local_agents):
+class Strategist(Server):
+    """
+    The strategist agent uses game information to decide which agent plays
+    what role.
+    """
+    def __init__(self, user, queue, print_json=False):
         """
-        If the agent know the identity of another agent, they will merge their
-        graphs.
+        Initialize the stratagist as a child of the server. Add an input_queue,
+        which is used for task from the agents to the strategist, and an
+        output_queue, which is used for tasks from the strategist to the
+        agents.
+
+        Arguments
+        ----------
+        user: str
+            The username of the agent.
+        pw: str
+            The password of the agent.
+        queue: (Queue, Queue)
+            A tuple containing both the input and output queue. The size of
+            both queues is equal the the number of agents playing.
+        print_json: bool
+            If the communication jsons should be printed.
+        """
+        super().__init__(user, print_json)
+        self.input_queue = queue[0]
+        self.output_queue = queue[1]
+        print(f'\033[1;34m{self._user}\033[0;0m running')
+
+    def run(self):
+        """
+        The function that runs the strategist.
+        """
+        while True:
+            if self.input_queue.full():
+                while not self.input_queue.empty():
+                    request, agent_id = self.input_queue.get()
+                    if request == 'update beliefs':
+                        #print(f'Agent{agent_id}: beliefs updated')
+                        self.input_queue.task_done()
+
+                    elif request == 'print name':
+                        print(args.name)
+                        self.input_queue.task_done()
+
+    def get_agent_names(self):
+        """
+        Return a list with the names of all active agents/threads. (Minus the
+        MainThread and the Strategist).
+        """
+        agents = [thread.name for thread in threading.enumerate()
+                  if thread.name not in ['MainThread', 'Strategist']]
+        return agents
+
+    def get_agent(self, name):
+        """
+        Return the agent object given the agent's name.
+        
+        Arguments
+        ---------
+        name: str
+            The name of the agent.
+        """
+        if isinstance(name, str):
+            if [thread for thread in threading.enumerate() if thread.name == name]:
+                return [thread for thread in threading.enumerate()
+                        if thread.name == name][0]
+        return False
+
+    def get_beliefs(self, name):
+        """
+        Return the graph of a certain agent.
 
         Arguments
         ---------
-        agent_id: int
-            The id of the agent requesting the action.
-        local_agents: dict(locations, agents)
-            The dictionary returned by potential_agents(). The keys are the
-            agent locations and the values are a list of potential agents.
+        name: str
+            The name of the agent.
         """
-        for location in local_agents:
-            if len(local_agents[location]) == 1:
-                agent = local_agents[location][0]
-                # Merge agents
-                if agent in self.graphs[agent_id].current.keys():
-                    pass#print(f'Agent{agent} is already merged with Agent{agent_id}.')
-                else:
-                    
-                    if agent < agent_id:
-                        print(f'Agent{agent_id} is merging with Agent{agent}.1')
-                        location = (-location[0], -location[1])
-                        g1 = merge_graphs(self.graphs[agent], agent,
-                                        self.graphs[agent_id], agent_id, location)
-                        for agent in g1.current:
-                            self.graphs[agent] = g1
-                    else:
-                        print(f'Agent{agent} is merging with Agent{agent_id}.2')
-                        g1 = merge_graphs(self.graphs[agent_id], agent_id,
-                                        self.graphs[agent], agent, location)
-                        for agent in g1.current:
-                            self.graphs[agent] = g1
-
-    def eliminate_agents(self, agent_id, location, potential):
-        """
-        Eliminate potential agents based on environmental information.
-
-        Arguments
-        ---------
-        agent_id: int
-            The id of the agent requesting the action (the agent itself).
-        location: (int, int)
-            The offset between the comparing agents.
-        potential: list
-            A list of id's of the potential agents.
-        """
-        finalists = potential[:]
-        own_local_nodes = self.graphs[agent_id].get_local_nodes(agent_id, offset=(0, 0))
-        for agent in potential:
-            intersection = []
-            agent_local_nodes = self.graphs[agent].get_local_nodes(agent, offset=(0, 0))
-            for node in agent_local_nodes:
-                temp = (node[0] + location[0], node[1] + location[1])
-                if temp in own_local_nodes:
-                    intersection.append(temp)
-            
-            for node in intersection:
-                # node + current location
-                own_node = (node[0] + self.graphs[agent_id].get_current(agent_id).location[0], 
-                            node[1] + self.graphs[agent_id].get_current(agent_id).location[1])
-
-                # node - location + current location
-                agent_node = (node[0] - location[0] + self.graphs[agent].get_current(agent).location[0], 
-                                node[1] - location[1] + self.graphs[agent].get_current(agent).location[1])
-
-                if compare_nodes(self.graphs[agent_id].nodes[own_node],
-                        self.graphs[agent].nodes[agent_node],
-                        self.graphs[agent_id].get_step()):
-                    pass
-                else:
-                    finalists.remove(agent)
-                    break
-
-        return finalists
-
-    def potential_agents(self, agent_id, location=None):
-        """
-        Create a list of potential agent id's on a certain location.
-        If no location is given all locations where agents are will be calculated.
-        """
-        if location:
-            potential = []
-            reverse_location = (-location[0], -location[1])
-            for agent in self.agents.values():
-                if agent._user_id != agent_id:
-                    if reverse_location in \
-                            self.graphs[agent._user_id].get_local_agents(agent._user_id):
-                        potential.append(agent._user_id)
-
-            if len(potential) == 1:
-                return potential[0]
-            else:
-                return self.eliminate_agents(agent_id, location, potential)
-
-        else:
-            potential = {}
-            local_agent = self.graphs[agent_id].get_local_agents(agent_id)
-            reverse_local_agent = [(-x, -y) for (x, y) in local_agent]
-
-            for agent in self.agents.values():
-                if agent._user_id != agent_id:
-                    local_agents = self.graphs[agent._user_id].get_local_agents(agent._user_id)
-                    for node in reverse_local_agent:
-                        if node in local_agents:
-                            node = (-node[0], -node[1])
-                            if node in potential.keys():
-                                potential[node].append(agent._user_id)
-                            else:
-                                potential[node] = [agent._user_id]
-            for node in potential:
-                potential[node] = self.eliminate_agents(agent_id, node, potential[node])
-        return potential
-
-def compare_nodes(n1, n2, step):
-    # Terrain
-    if n1.get_terrain()[0] != n2.get_terrain()[0]:
+        if isinstance(name, str):
+            return self.get_agent(name).beliefs
         return False
 
-    # Things
-    if sorted(n1.get_things(step)) != sorted(n2.get_things(step)):
-        return False
-
-    return True
+if __name__ == "__main__":
+    input_queue, output_queue = Queue(maxsize=0), Queue(maxsize=0)
+    strategist = Strategist(f"Strategist", [input_queue, output_queue])
+    strategist.start()

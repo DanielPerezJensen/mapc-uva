@@ -5,17 +5,17 @@ import argparse
 
 class DebugAgent(Agent):
     """
-    The debug agent gives agents the superpower of using global coordinates to navigate.
-    They still have limited vision, but their initial position is given in global coordinates.
+    The debug agent gives agents the superpower of using global coordinates to
+    navigate. They still have limited vision, but their initial position is
+    given in global coordinates.
     """
 
     def __init__(self, user, pw, global_pos, print_json=True):
         """
-        Initialise the debug agent by providing it with it's global starting coordinates.
+        Initialise the debug agent by providing it with it's global starting
+        coordinates.
         """
-
         super().__init__(user, pw, print_json)
-        
         new_node_dict = {}
         gl_x, gl_y = global_pos
         for (x, y), node in self.graph.nodes.items():
@@ -27,7 +27,6 @@ class DebugAgent(Agent):
         self.graph.nodes = new_node_dict
         # self.first_step()
 
-        
     def first_step(self):
         """
         Function that parses the first percept to map the environment
@@ -46,8 +45,6 @@ class DebugAgent(Agent):
                 self.graph.update_graph(msg)
                 break
         print(self.name, ": graph updated, ready!")
-
-
 
 
 if __name__ == "__main__":
@@ -69,11 +66,10 @@ if __name__ == "__main__":
         "agentA14": (38, 37)
     }
 
-
     a_list = {}
     for name, global_loc in global_locs.items():
         a_list[name] = DebugAgent(name, "1", global_loc, print_json=False)
         a_list[name].start()
-        
+
     for name in global_locs.keys():
         a_list[name].run()
