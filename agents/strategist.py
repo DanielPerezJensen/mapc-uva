@@ -19,7 +19,11 @@ class Strategist(object):
             return self.agents[agent_id]
 
     def get_graph_pairs(self, agent_id):
-        return list(self.graphs[agent_id].current.keys())
+        pair = []
+        for agent in self.graphs[agent_id].current.keys():
+            if self.graphs[agent] == self.graphs[agent_id]:
+                pair.append(agent)
+        return pair
     
     def get_all_pairs(self):
         n = list(self.agents.keys())

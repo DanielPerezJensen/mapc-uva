@@ -872,13 +872,24 @@ if __name__ == '__main__':
                 "energy":300},\
             "deadline":1587837763855}}')
 
-    graph1 = Graph(0)
-    graph1.update(agent_0_step_0, 0)
-    graph1.update(agent_0_step_1, 0)
+    graph0 = Graph(0)
+    graph0.update(agent_0_step_0, 0)
+    #graph0.update(agent_0_step_1, 0)
 
     graph2 = Graph(2)
     graph2.update(agent_2_step_0, 2)
     graph2.update(agent_2_step_1, 2)
 
-    graph2 = merge_graphs(graph1, 0, graph2, 2, (1, 2))
+    #graph1 = Graph(1)
+
+    #graph1 = merge_graphs(graph2, 2, graph1, 1, (1, 2))
+
+    graph2 = merge_graphs(graph0, 0, graph2, 2, (1, 1))
+
+    print(graph0)
     print(graph2)
+
+    graph0.update(agent_0_step_1, 0)
+    print(graph0)
+    print(graph2)
+
