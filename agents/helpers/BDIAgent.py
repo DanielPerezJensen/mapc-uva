@@ -21,7 +21,7 @@ class BDIAgent():
             descriptions: list of descriptions
         """
         additions = [self.Template(i, a, c, d) for i, a, c, d
-                                in zip(intentions, args, contexts, descriptions)]
+                     in zip(intentions, args, contexts, descriptions)]
         if additions != self.previous_additions:
             self.intention_queue.extend(additions)
             self.previous_additions = additions
@@ -45,7 +45,7 @@ class BDIAgent():
             return None
         action, args, context, description = last_action
         # Only remove intention from queue if it succeeds
-        return_value, flag = action(args)
+        return_value, flag = action(*args)
         print(return_value)
         print(flag)
         if flag:

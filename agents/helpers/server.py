@@ -3,7 +3,9 @@ import json
 import time
 from threading import Thread
 
-COLORS = ['\033[1;31m','\033[1;32m','\033[1;33m','\033[1;34m','\033[1;35m','\033[1;36m','\033[1;37m','\033[1;90m','\033[1;91m','\033[1;92m','\033[1;93m','\033[1;94m','\033[1;95m','\033[1;96m','\033[1;30m']
+COLORS = ['\033[1;31m', '\033[1;32m', '\033[1;33m', '\033[1;34m', '\033[1;35m',
+          '\033[1;36m', '\033[1;37m', '\033[1;90m', '\033[1;91m', '\033[1;92m',
+          '\033[1;93m', '\033[1;94m', '\033[1;95m', '\033[1;96m', '\033[1;30m']
 END_COLOR = '\033[0;0m'
 
 
@@ -28,7 +30,8 @@ class Server(Thread):
         """
         super().__init__(name=user)
         self._user = user
-        self._user_id = int((user[-2] if user[-2].isdigit() else "") + user[-1])
+        self._user_id = int((user[-2] if user[-2].isdigit() else "") + 
+                            user[-1])
         self._pw = pw
         self._print_json = print_json
 
@@ -138,11 +141,12 @@ class Server(Thread):
             The action-request of the server.
         """
         if action_request["content"]["percept"]["lastAction"] != "no_action":
-            if action_request["content"]["percept"]["lastActionResult"] == "success":
+            if action_request["content"]["percept"]["lastActionResult"] == \
+                    "success":
                 return True
-            
+
         return False
-    
+
     @staticmethod
     def _add_request_id(action, request_id):
         """
@@ -153,5 +157,5 @@ class Server(Thread):
         action: dict
             The action to be sent to the server.
         """
-        action[0]['content']['id'] = request_id
-        return action[0]
+        action['content']['id'] = request_id
+        return action
