@@ -460,6 +460,18 @@ class Graph(object):
         Return the node of the agent's current location.
         """
         return self.current[agent_id]
+    
+    def get_node(self, node):
+        """
+        Return the node if it exists, otherwise None.
+
+        Arguments
+        ---------
+        node: (int, int)
+            The coordinates of the requested node.
+        """
+        if node in self.nodes.keys():
+            return self.nodes[node]
 
     def get_new_agents(self, vision, agent_id):
         """
