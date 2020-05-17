@@ -4,6 +4,7 @@ from .builder import Builder
 from .defender import Defender
 from .mapper import Mapper
 from .spy import Spy
+
 import json
 import time
 import threading
@@ -17,7 +18,6 @@ END_COLOR = '\033[0;0m'
 
 
 class SuperAgent(*AGENTS, BDIAgent):
-
     def __init__(self, user, pw, print_json=False, timer=False):
         super().__init__(user, pw, print_json)
         self._timer = timer
@@ -26,10 +26,17 @@ class SuperAgent(*AGENTS, BDIAgent):
         """
         Function that runs the agents.
         """
+        strategist = [agent for agent in threading.enumerate()
+                      if agent.name == 'Strategist'][0]
+        if strategist:
+            self.input_queue = strategist.input_queue
+            self.output_queue = strategist.output_queue
+        else:
+            print('Agents play without the strategist.')
+
         while True:
             # Receive a message.
             msg = self.receive_msg()
-
             if msg:
                 # Parse the response.
                 if msg["type"] == "request-action":
@@ -37,8 +44,16 @@ class SuperAgent(*AGENTS, BDIAgent):
                     request_id = self._get_request_id(msg)
                     agent_id = self._user_id
 
+                    
                     # Update beliefs
                     self.beliefs.update(msg, agent_id)
+
+                    # Send a message to the strategist that if has updated its
+                    # beliefs. Agent can continue when all agents updated their
+                    # belief.
+                    if hasattr(self, 'input_queue'):
+                        self.input_queue.put(('update beliefs', agent_id))
+                        self.input_queue.join()
 
                     # TODO: Listen to strategist thread for role
 

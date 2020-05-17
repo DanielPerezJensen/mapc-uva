@@ -14,7 +14,7 @@ class Server(Thread):
     Class used to connect, authorize, receive and send messages
     with/to the server
     """
-    def __init__(self, user, pw, print_json=False):
+    def __init__(self, user, pw='1', print_json=False):
         """
         Store some information about the agent and connect and authorize with
         the server
@@ -30,14 +30,17 @@ class Server(Thread):
         """
         super().__init__(name=user)
         self._user = user
-        self._user_id = int((user[-2] if user[-2].isdigit() else "") + 
-                            user[-1])
-        self._pw = pw
         self._print_json = print_json
 
-        # Create, connect and authorize socket connection
-        self.connect_socket()
-        self.authorize_socket()
+        if user == 'Strategist':
+            self._user_id = 0
+        else:
+            self._user_id = int((user[-2] if user[-2].isdigit() else "") + 
+                            user[-1])
+            self._pw = pw
+            # Create, connect and authorize socket connection
+            self.connect_socket()
+            self.authorize_socket()
 
     def connect_socket(self):
         # Create socket object.

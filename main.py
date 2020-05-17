@@ -1,9 +1,15 @@
 import sys
 from agents import SuperAgent
+from agents import Strategist
+from queue import Queue
 
 n_agents = 15
-a_list = []
+agent_list = []
+input_queue, output_queue = Queue(maxsize=n_agents), Queue(maxsize=0)
+
+strategist = Strategist(f"Strategist", [input_queue, output_queue])
+strategist.start()
 
 for i in range(1, n_agents + 1):
-    a_list.append(SuperAgent(f"agentA{i}", "1"))
-    a_list[-1].start()
+    agent_list.append(SuperAgent(f"agentA{i}", "1"))
+    agent_list[-1].start()
