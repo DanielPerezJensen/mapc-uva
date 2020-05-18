@@ -96,6 +96,8 @@ def get_adjacent(i, j):
 def create_setup_file(mapping, tasks, output_file):
     config = {'teams':[], 'agent_ids': [], 'blocks':[]}
     attach_queue = []
+    w = len(mapping[0])
+    h = len(mapping)
     for i in range(len(mapping[0])):
         for j in range(len(mapping)):
             element = mapping[j][i]
@@ -129,8 +131,7 @@ def create_setup_file(mapping, tasks, output_file):
                 output_file.write(f"add {i} {j} block {element[-2:]}\n")
                 if '!' in element:
                     for adj_i, adj_j in get_adjacent(i, j):
-                        if mapping[adj_j % len(mapping[0])][adj_i % len(mapping)][0].isupper() \
-                                    or 'b' in mapping[adj_j][adj_i]:
+                        if mapping[adj_j % w][adj_i % h][0].isupper() or 'b' in mapping[adj_j % w][adj_i % h]:
                             attach_queue.append(
                                 f'attach {adj_i} {adj_j} {i} {j}\n')
 
@@ -167,7 +168,7 @@ def get_path_to_config(tools_prefix):
         with open(path_file, "w") as f:
             f.write(path_to_config)
         print("Path saved for future use")
-    path_to_config = path_to_config
+
     if path_to_config[-1] != '/':
         return path_to_config + '/'
     return path_to_config
