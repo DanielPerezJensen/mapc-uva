@@ -5,49 +5,38 @@ configuration is needed after running this file.
 """
 import sys
 import json
+import os
+
 
 def main():
     """
     'g' is a goal location
-    '#' is an obstacle
-    '{team}{digit}' refers to agent{team}{digit}, where team must be uppercase.
-    'b{digit}' refers to a block of type {digit}. 
-        If an exclamation mark is in front of  the digit (e.g. '!b{digit}'), the block is attatched to an adjascent agent/block.
-    'd{digit}' refers to a dispenser of type {digit}.
-
+   '#' is an obstacle
+   '{team}{digit}' refers to agent{team}{digit}, where team must be uppercase.
+   'b{digit}' refers to a block of type {digit}.
+       If an exclamation mark is in front of  the digit (e.g. '!b{digit}'),
+       the block is attatched to an adjascent agent/block.
+   'd{digit}' refers to a dispenser of type {digit}.
     A task can be created in the dictionary as follows:
     {'task_name': (duration, [(x1, y1, block), (x2, y2, block)])}
     Where the coordinates are relative to the agent.
     """
-    mapping = [
-        ['.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.'],
-        ['.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.'],
-        ['.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.'],
-        ['.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', 'd0', '.', '.', '.', '.', '.'],
-        ['.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.'],
-        ['.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.'],
-        ['.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.'],
-        ['.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.'],
-        ['.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.'],
-        ['.', '.', 'g', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '#', '.', '.', '.', '.'],
-        ['.', '.', '.', '.', '.', '.', '#', '.', '.', '.', '.', '.', '.', '.', '#', '#', '.', '.', '.', '.'],
-        ['.', '.', '.', '.', '.', '#', '#', '#', '.', '#', '.', '.', '#', '#', '#', '#', '.', '.', '.', '.'],
-        ['.', '#', '#', '#', '#', '#', '#', '#', '#', '#', '#', '#', '#', '#', '#', '.', '.', '.', '.', '.'],
-        ['.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.'],
-        ['.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.'],
-        ['.', '.', '.', '.', '#', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.'],
-        ['.', '#', '#', '#', '#', '.', '.', '.', '.', 'A1', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.'],
-        ['.', '.', '.', '.', '#', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.'],
-        ['.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.'],
-        ['.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.'],
-        ['A2', 'B2', 'B1', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.']
-    ]
-
-    tasks = {'task1': (100, [(1, 0, 'b0')])}
-    steps = 300
 
     # get the prefix of the tools directory
-    tools_prefix = '/'.join(sys.argv[0].split('/')[:-1]) + '/'
+    tools_prefix = os.path.dirname(os.path.abspath(__file__)) + "/"
+
+    try:
+        with open(tools_prefix + 'customMap.txt', 'r') as f:
+            mapping = [line.strip().split(" ") for line in f]
+            # TODO: check if mapping is correct
+
+    except FileNotFoundError:
+        print("customMap.txt does not exist")
+        print("Please create the customMap.txt file in the tools directory")
+
+    # TODO: Add tasks and steps into customMap.txt and parse it nicely
+    tasks = {'task1': (100, [(1, 0, 'b0')])}
+    steps = 300
 
     # get path to config, request it if it does not yet exist
     path_to_config = get_path_to_config(tools_prefix)
@@ -55,7 +44,7 @@ def main():
     config_name = "Custom.json"
     sim_name = "sim/simCustom.json"
     setup_name = "setup/custom.txt"
-    
+
     # create the setup file
     setup_file = open(path_to_config + setup_name, "w")
     config = create_setup_file(mapping, tasks, setup_file)
@@ -82,7 +71,7 @@ def main():
     # write results
     with open(path_to_config + config_name, "w") as f:
         json.dump(sample_config, f, indent=4)
-    
+
     with open(path_to_config + sim_name, "w") as f:
         json.dump(sample_sim, f, indent=4)
 
@@ -94,7 +83,7 @@ def get_adjacent(i, j):
 
 
 def create_setup_file(mapping, tasks, output_file):
-    config = {'teams':[], 'agent_ids': [], 'blocks':[]}
+    config = {'teams': [], 'agent_ids': [], 'blocks': []}
     attach_queue = []
     w = len(mapping[0])
     h = len(mapping)
@@ -161,12 +150,17 @@ def get_path_to_config(tools_prefix):
     try:
         with open(path_file) as f:
             path_to_config = f.readline()
-    except:
+    except FileNotFoundError:
+        print("path_to_config.txt not found")
+
         path_to_config = input("Enter full path to the conf folder of the \
             server\ni.e. path/to/massim_2020/server/conf\n"
                                ).strip().replace('\\', '')
+
         with open(path_file, "w") as f:
             f.write(path_to_config)
+
+        print("Creating path_to_config.txt")
         print("Path saved for future use")
 
     if path_to_config[-1] != '/':
