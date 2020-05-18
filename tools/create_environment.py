@@ -1,60 +1,52 @@
 """
 File to create a map from scratch for the agents.
+The environments are created directly in the server, so no further
+configuration is needed after running this file.
 """
 import sys
 import json
+import os
+
 
 def main():
     """
     'g' is a goal location
-    '#' is an obstacle
-    '{team}{digit}' refers to agent{team}{digit}, where team must be uppercase.
-    'b{digit}' refers to a block of type {digit}. 
-        If an exclamation mark is in front of  the digit (e.g. '!b{digit}'), 
-        the block is attatched to an adjascent agent/block.
-    'd{digit}' refers to a dispenser of type {digit}.
-
+   '#' is an obstacle
+   '{team}{digit}' refers to agent{team}{digit}, where team must be uppercase.
+   'b{digit}' refers to a block of type {digit}.
+       If an exclamation mark is in front of  the digit (e.g. '!b{digit}'),
+       the block is attatched to an adjascent agent/block.
+   'd{digit}' refers to a dispenser of type {digit}.
     A task can be created in the dictionary as follows:
     {'task_name': (duration, [(x1, y1, block), (x2, y2, block)])}
     Where the coordinates are relative to the agent.
 
-    Taskboards refers to the number of taskboards in the game, these can only be generated at a random location.
+    Taskboards refers to the number of taskboards in the game, these can only
+    be generated at a random location.
     Steps refers to the amount of steps for the simulation.
-    If fast_mode is set to false, extra agents are moved outside the map, this ensures that the game will not skip through the steps.
+    If fast_mode is set to false, extra agents are moved outside the map,
+    this ensures that the game will not skip through the steps.
     """
 
-    ######## CONFIG #########
-    mapping = [
-        ['.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.'],
-        ['.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.'],
-        ['.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.'],
-        ['.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', 'd0', '.', '.', '.', '.', '.'],
-        ['.', '.', '.', '.', '#', '#', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.'],
-        ['.', '.', '.', '.', '#', '#', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.'],
-        ['.', 'A1', '.', '.', '.', '#', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.'],
-        ['.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.'],
-        ['.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.'],
-        ['.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '#', '.', '.', '.', '.'],
-        ['.', '.', '.', '.', '.', '.', '#', '.', '.', '.', '.', '.', '.', '.', '#', '#', '.', '.', '.', '.'],
-        ['.', '.', '.', '.', '.', '#', '#', '#', '.', '#', '.', '.', '#', '#', '#', '#', '.', '.', '.', 'd1'],
-        ['.', '.', '#', '#', '#', '#', '#', '#', '#', '#', '#', '#', '#', '#', '#', '.', '.', '.', '.', '.'],
-        ['.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.'],
-        ['.', 'g', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.'],
-        ['.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.'],
-        ['.', '#', '#', '#', '#', '.', '.', '.', '.', 'g', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.'],
-        ['.', '#', '#', '#', '#', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.'],
-        ['.', '.', '.', '#', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.'],
-        ['.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.']
-    ]
-
-    tasks = {'task1': (100, [(1, 0, 'b0')]), 'task2': (200, [(0, 1, 'b1')])}
-    taskboards = 1
-    steps = 300
-    fast_mode = False
-    #########################
-
     # get the prefix of the tools directory
-    tools_prefix = '/'.join(sys.argv[0].split('/')[:-1]) + '/'
+    tools_prefix = os.path.dirname(os.path.abspath(__file__)) + "/"
+
+    try:
+        with open(tools_prefix + 'customMap.txt', 'r') as f:
+            mapping = [line.strip().split(" ") for line in f]
+            # TODO: check if mapping is correct
+
+    except FileNotFoundError:
+        print("customMap.txt does not exist")
+        print("Please create the customMap.txt file in the tools directory")
+        return
+
+    # TODO: Add tasks and steps into customMap.txt and parse it nicely
+    tasks = {'task1': (100, [(1, 0, 'b0')])}
+    steps = 300
+    fast_mode = True
+    taskboards = 1
+    #########################
 
     # get path to config, request it if it does not yet exist
     path_to_config = get_path_to_config(tools_prefix)
@@ -62,7 +54,7 @@ def main():
     config_name = "Custom.json"
     sim_name = "sim/simCustom.json"
     setup_name = "setup/custom.txt"
-    
+
     # create the setup file
     setup_file = open(path_to_config + setup_name, "w")
     config = create_setup_file(mapping, tasks, setup_file)
@@ -76,7 +68,7 @@ def main():
     sample_config["manual-mode"][0] = config['teams']
     sample_config["match"][0] = "$(" + sim_name + ")"
     for team in config['teams']:
-        sample_config[team] = {"prefix" : "agent", "password" : "1"}
+        sample_config[team] = {"prefix": "agent", "password": "1"}
 
     # edit sample simulation
     if fast_mode:
@@ -97,7 +89,7 @@ def main():
     # write results
     with open(path_to_config + config_name, "w") as f:
         json.dump(sample_config, f, indent=4)
-    
+
     with open(path_to_config + sim_name, "w") as f:
         json.dump(sample_sim, f, indent=4)
 
@@ -107,9 +99,13 @@ def main():
 def get_adjacent(i, j):
     return [(i+1, j), (i, j+1), (i-1, j), (i, j-1)]
 
+
 def create_setup_file(mapping, tasks, output_file):
-    config = {'teams':[], 'agent_ids': [], 'blocks':[]}
+    config = {'teams': [], 'agent_ids': [], 'blocks': []}
+    queue = []
     attach_queue = []
+    w = len(mapping[0])
+    h = len(mapping)
     for i in range(len(mapping[0])):
         for j in range(len(mapping)):
             element = mapping[j][i]
@@ -125,27 +121,30 @@ def create_setup_file(mapping, tasks, output_file):
                 output_file.write(f"move {i} {j} agent{element}\n")
             elif element == '#':
                 # create obstacle
-                output_file.write(f"terrain {i} {j} obstacle\n")
+                queue.append(f"terrain {i} {j} obstacle\n")
             elif element == 'g':
                 # create goal location
-                output_file.write(f"terrain {i} {j} goal\n")
+                queue.append(f"terrain {i} {j} goal\n")
             elif element[0] == 'd':
                 # add to config
                 if element[1:] not in config['blocks']:
                     config['blocks'].append(element[1:])
                 # create dispenser
-                output_file.write(f"add {i} {j} dispenser b{element[1:]}\n")
+                queue.append(f"add {i} {j} dispenser b{element[1:]}\n")
             elif 'b' in element:
                 # add to config
                 if element[-1] not in config['blocks']:
                     config['blocks'].append(element[-1])
                 # create block
-                output_file.write(f"add {i} {j} block {element[-2:]}\n")
+                queue.append(f"add {i} {j} block {element[-2:]}\n")
                 if '!' in element:
                     for adj_i, adj_j in get_adjacent(i, j):
-                        if mapping[adj_j][adj_i][0].isupper() or 'b' in mapping[adj_j][adj_i]:
-                            attach_queue.append(f'attach {adj_i} {adj_j} {i} {j}\n')
-    
+                        if adj_i < w and adj_j < h:
+                            if mapping[adj_j][adj_i][0].isupper() or \
+                               'b' in mapping[adj_j][adj_i]:
+                                attach_queue.append(
+                                    f'attach {adj_i} {adj_j} {i} {j}\n')
+
     # create tasks
     for name, (duration, options) in tasks.items():
         # add blocks to shape
@@ -161,22 +160,31 @@ def create_setup_file(mapping, tasks, output_file):
         # create task
         output_file.write(task + '\n')
 
-    # add attachments
+    # write to file
+    output_file.writelines(queue)
     output_file.writelines(attach_queue)
 
     return config
+
 
 def get_path_to_config(tools_prefix):
     path_file = tools_prefix + 'path_to_config.txt'
     try:
         with open(path_file) as f:
             path_to_config = f.readline()
-    except:
-        path_to_config = input("Enter full path to the conf folder of the server\ni.e. path/to/massim_2020/server/conf\n").strip().replace('\\', '')
+    except FileNotFoundError:
+        print("path_to_config.txt not found")
+
+        path_to_config = input("Enter full path to the conf folder of the \
+            server\ni.e. path/to/massim_2020/server/conf\n"
+                               ).strip().replace('\\', '')
+
         with open(path_file, "w") as f:
             f.write(path_to_config)
+
+        print("Creating path_to_config.txt")
         print("Path saved for future use")
-    path_to_config = path_to_config
+
     if path_to_config[-1] != '/':
         return path_to_config + '/'
     return path_to_config

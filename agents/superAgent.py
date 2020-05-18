@@ -23,6 +23,7 @@ class SuperAgent(*AGENTS, BDIAgent):
         while True:
             # Receive a message.
             msg = self.receive_msg()
+            time.sleep(1)
 
             if msg:
                 # Parse the response.
@@ -46,14 +47,19 @@ class SuperAgent(*AGENTS, BDIAgent):
                         intention_addition = agent_type.get_intention(self)
 
                         self.add_intention(*intention_addition)
-
+                    request_id = self._get_request_id(msg)
+                    if request_id == 8:
+                        print("step 8")
                     action = self.execute_intention()
+                    
+                    print("action in superAgent:", action)
                     if action:
-                        request_id = self._get_request_id(msg)
                         self.send_request(self._add_request_id(action,
                                           request_id))
                     else:
                         action = self.skip()
+                        self.send_request(
+                            self._add_request_id(action, request_id))
                         self.pretty_print("Done with action", request_id)
 
                     # # Makes the agents walk around randomly
