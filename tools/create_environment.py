@@ -84,6 +84,7 @@ def get_adjacent(i, j):
 
 def create_setup_file(mapping, tasks, output_file):
     config = {'teams': [], 'agent_ids': [], 'blocks': []}
+    queue = []
     attach_queue = []
     w = len(mapping[0])
     h = len(mapping)
@@ -102,27 +103,29 @@ def create_setup_file(mapping, tasks, output_file):
                 output_file.write(f"move {i} {j} agent{element}\n")
             elif element == '#':
                 # create obstacle
-                output_file.write(f"terrain {i} {j} obstacle\n")
+                queue.append(f"terrain {i} {j} obstacle\n")
             elif element == 'g':
                 # create goal location
-                output_file.write(f"terrain {i} {j} goal\n")
+                queue.append(f"terrain {i} {j} goal\n")
             elif element[0] == 'd':
                 # add to config
                 if element[1:] not in config['blocks']:
                     config['blocks'].append(element[1:])
                 # create dispenser
-                output_file.write(f"add {i} {j} dispenser b{element[1:]}\n")
+                queue.append(f"add {i} {j} dispenser b{element[1:]}\n")
             elif 'b' in element:
                 # add to config
                 if element[-1] not in config['blocks']:
                     config['blocks'].append(element[-1])
                 # create block
-                output_file.write(f"add {i} {j} block {element[-2:]}\n")
+                queue.append(f"add {i} {j} block {element[-2:]}\n")
                 if '!' in element:
                     for adj_i, adj_j in get_adjacent(i, j):
-                        if mapping[adj_j % w][adj_i % h][0].isupper() or 'b' in mapping[adj_j % w][adj_i % h]:
-                            attach_queue.append(
-                                f'attach {adj_i} {adj_j} {i} {j}\n')
+                        if adj_i < w and adj_j < h:
+                            if mapping[adj_j][adj_i][0].isupper() or 'b' in mapping[adj_j][adj_i]:
+                                print('found valid attachment')
+                                attach_queue.append(
+                                    f'attach {adj_i} {adj_j} {i} {j}\n')
 
     # create tasks
     for name, (duration, options) in tasks.items():
@@ -139,7 +142,8 @@ def create_setup_file(mapping, tasks, output_file):
         # create task
         output_file.write(task + '\n')
 
-    # add attachments
+    # write to file
+    output_file.writelines(queue)
     output_file.writelines(attach_queue)
 
     return config
