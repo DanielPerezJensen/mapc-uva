@@ -113,7 +113,7 @@ class Mapper(Agent):
                 self.z_goal = list(self.graph.get_current().location)
                 self.prev_zigzag = self.zigzag
                 self.zigzag = self.options[2]
-                print(f'{self._user}: Changing direction to {self.zigzag}')
+                self.pretty_print(f'changing direction to {self.zigzag}')
 
         if self.zigzag == 'north':
             action = self.nav_to((self.z_goal[0], self.z_goal[1]-path_length),
@@ -122,7 +122,7 @@ class Mapper(Agent):
                 self.z_goal = list(self.graph.get_current().location)
                 self.prev_zigzag = self.zigzag
                 self.zigzag = self.options[2]
-                print(f'{self._user}: Changing direction to {self.zigzag}')
+                self.pretty_print(f'changing direction to {self.zigzag}')
 
         if self.zigzag == self.options[2]:
             if self.options[2] == 'east':
@@ -139,7 +139,7 @@ class Mapper(Agent):
                 else:
                     self.prev_zigzag = self.zigzag
                     self.zigzag = 'north'
-                print(f'{self._user}: Changing direction to {self.zigzag}')
+                self.pretty_print(f'changing direction to {self.zigzag}')
 
         return action
 

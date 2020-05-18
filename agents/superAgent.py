@@ -7,10 +7,6 @@ from .spy import Spy
 import time
 
 AGENTS = [Attacker, Builder, Defender, Mapper, Spy]
-COLORS = ['\033[1;31m', '\033[1;32m', '\033[1;33m', '\033[1;34m', '\033[1;35m',
-          '\033[1;36m', '\033[1;37m', '\033[1;90m', '\033[1;91m', '\033[1;92m',
-          '\033[1;93m', '\033[1;94m', '\033[1;95m', '\033[1;96m', '\033[1;30m']
-END_COLOR = '\033[0;0m'
 
 
 class SuperAgent(*AGENTS, BDIAgent):
@@ -57,8 +53,8 @@ class SuperAgent(*AGENTS, BDIAgent):
                         self.send_request(self._add_request_id(action,
                                           request_id))
                     else:
-                        print("Done with action")
-
+                        action = self.skip()
+                        self.pretty_print("Done with action", request_id)
 
                     # # Makes the agents walk around randomly
                     # options = ['single', 'random', 'east']
@@ -74,7 +70,8 @@ class SuperAgent(*AGENTS, BDIAgent):
                         end_ms = int(round(time.time() * 1000))
                         diff = msg["content"]["deadline"] - end_ms
                         time_relation = 'before' if diff >= 0 else 'after'
-                        print(f"{COLORS[self._user_id % 15]}{self.name:<10}{END_COLOR} {f'done {abs(diff)} ms {time_relation} deadline':<50} step {request_id}")
+                        self.pretty_print(f"done {abs(diff)} ms \
+                                        {time_relation} deadline", request_id)
 
                 elif msg["type"] == "sim-start":
                     pass
