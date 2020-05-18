@@ -10,7 +10,8 @@ def main():
     '#' is an obstacle
     '{team}{digit}' refers to agent{team}{digit}, where team must be uppercase.
     'b{digit}' refers to a block of type {digit}. 
-        If an exclamation mark is in front of  the digit (e.g. '!b{digit}'), the block is attatched to an adjascent agent/block.
+        If an exclamation mark is in front of  the digit (e.g. '!b{digit}'), 
+        the block is attatched to an adjascent agent/block.
     'd{digit}' refers to a dispenser of type {digit}.
 
     A task can be created in the dictionary as follows:
