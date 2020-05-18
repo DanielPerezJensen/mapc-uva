@@ -1,5 +1,7 @@
 """
 File to create a map from scratch for the agents.
+The environments are created directly in the server, so no further
+configuration is needed after running this file.
 """
 import sys
 import json
@@ -34,7 +36,7 @@ def main():
         ['.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.'],
         ['.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.'],
         ['.', '.', '.', '.', '#', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.'],
-        ['.', '#', '#', '#', '#', '.', '.', '.','.','A1','.', '.', '.', '.', '.', '.', '.', '.', '.', '.'],
+        ['.', '#', '#', '#', '#', '.', '.', '.', '.', 'A1', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.'],
         ['.', '.', '.', '.', '#', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.'],
         ['.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.'],
         ['.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.'],
@@ -67,7 +69,7 @@ def main():
     sample_config["manual-mode"][0] = config['teams']
     sample_config["match"][0] = "$(" + sim_name + ")"
     for team in config['teams']:
-        sample_config[team] = {"prefix" : "agent", "password" : "1"}
+        sample_config[team] = {"prefix": "agent", "password": "1"}
 
     # edit sample simulation
     sample_sim["grid"]["height"] = len(mapping)
@@ -89,6 +91,7 @@ def main():
 
 def get_adjacent(i, j):
     return [(i+1, j), (i, j+1), (i-1, j), (i, j-1)]
+
 
 def create_setup_file(mapping, tasks, output_file):
     config = {'teams':[], 'agent_ids': [], 'blocks':[]}
@@ -126,9 +129,11 @@ def create_setup_file(mapping, tasks, output_file):
                 output_file.write(f"add {i} {j} block {element[-2:]}\n")
                 if '!' in element:
                     for adj_i, adj_j in get_adjacent(i, j):
-                        if mapping[adj_j][adj_i][0].isupper() or 'b' in mapping[adj_j][adj_i]:
-                            attach_queue.append(f'attach {adj_i} {adj_j} {i} {j}\n')
-    
+                        if mapping[adj_j % len(mapping[0])][adj_i % len(mapping)][0].isupper() \
+                                    or 'b' in mapping[adj_j][adj_i]:
+                            attach_queue.append(
+                                f'attach {adj_i} {adj_j} {i} {j}\n')
+
     # create tasks
     for name, (duration, options) in tasks.items():
         # add blocks to shape
@@ -149,13 +154,16 @@ def create_setup_file(mapping, tasks, output_file):
 
     return config
 
+
 def get_path_to_config(tools_prefix):
     path_file = tools_prefix + 'path_to_config.txt'
     try:
         with open(path_file) as f:
             path_to_config = f.readline()
     except:
-        path_to_config = input("Enter full path to the conf folder of the server\ni.e. path/to/massim_2020/server/conf\n").strip().replace('\\', '')
+        path_to_config = input("Enter full path to the conf folder of the \
+            server\ni.e. path/to/massim_2020/server/conf\n"
+                               ).strip().replace('\\', '')
         with open(path_file, "w") as f:
             f.write(path_to_config)
         print("Path saved for future use")
