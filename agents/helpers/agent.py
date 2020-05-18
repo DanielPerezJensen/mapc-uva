@@ -1,12 +1,14 @@
+from collections import deque
+from functools import partial
+import heapq
+
 if __name__ == "__main__":
     from server import Server
     from graph import Graph
 else:
     from .server import Server
     from .graph import Graph
-from collections import deque
-from functools import partial
-import heapq
+
 
 class Agent(Server):
     """
@@ -14,7 +16,7 @@ class Agent(Server):
     """
     def __init__(self, user, pw, print_json=False):
         """
-        Store some information about the agent and the socket so we can 
+        Store some information about the agent and the socket so we can
         connect to the localhost.
 
         parameters
@@ -28,10 +30,11 @@ class Agent(Server):
         """
         super().__init__(user, pw, print_json)
         self.last_action_move = None
-        self.graph = Graph()
         self.dstar = None
+        self.steps = None
+        self.beliefs = Graph(self._user_id)
 
-    def nav_to(self, goal, new_obs=[]):
+    def nav_to(self, goal, agent_id):
         """
         Navigate to coordinates in the agents local reference frame.
         The first call to nav_to does not require new_obs.
@@ -49,26 +52,32 @@ class Agent(Server):
 
         # Initialize or update
         if not self.dstar or self.dstar.goal != goal:
-            self.dstar = DStarLite(self.graph, goal)
+            self.dstar = DStarLite(self.beliefs, goal, agent_id)
         else:
-            self.dstar.update(self.graph, new_obs)
-        
-        # Get the new direction
-        new_loc  = self.dstar.move_to_goal()
+            self.dstar.update(self.beliefs)
 
-        # Check if path is possible or already at goal location
+        # Get the new direction
+        new_loc = self.dstar.move_to_goal()
+
+        # Check if path is impossible or already at goal location
         if not new_loc:
             return None
 
-        direction = self.graph.get_direction(new_loc)
+        direction = self.beliefs.get_direction(agent_id, new_loc)
 
-        if self.graph.nodes[new_loc]._is_obstacle():
-            clear_pos_x = (new_loc[0] - self.graph.current.location[0]) * 2
-            clear_pos_y = (new_loc[1] - self.graph.current.location[1]) * 2
-            return self.clear(clear_pos_x, clear_pos_y)
+        if self.beliefs.nodes[new_loc]._is_obstacle():
+            clear_pos_x = (new_loc[0] -
+                           self.beliefs.get_current(agent_id).location[0]) * 2
+            clear_pos_y = (new_loc[1] -
+                           self.beliefs.get_current(agent_id).location[1]) * 2
+            # Clear obstacle (invert flag because nav_to requires multiple
+            action = self.clear(clear_pos_x, clear_pos_y)
+            return action
         else:
-            # Move to location
-            return self.move(direction)
+            # Move to location (invert flag because nav_to requires
+            # multiple moves)
+            action = self.move(direction)
+            return action
 
     def quit_nav(self):
         """
@@ -170,8 +179,7 @@ class Agent(Server):
         self.last_action_move = ""
 
         # Create and return the request.
-        return self._create_action("connect", agent, 
-                                                    str(x), str(y))
+        return self._create_action("connect", agent, str(x), str(y))
 
     def disconnect(self, x1, y1, x2, y2):
         """
@@ -188,13 +196,12 @@ class Agent(Server):
         y2: int or str
             The relative y position of the second attachment.
         """
-        
+
         self.last_action_move = ""
 
         # Create and return the request.
-        return self._create_action("disconnect",
-                                                 str(x1), str(y1),
-                                                 str(x2), str(y2))
+        return self._create_action("disconnect", str(x1), str(y1),
+                                   str(x2), str(y2))
 
     def request(self, direction):
         """
@@ -269,7 +276,7 @@ class Agent(Server):
         # Create and return the request.
         return self._create_action("accept", task)
 
-    ### Helper functions ###
+    # Helper functions
     @staticmethod
     def _create_action(action_type, *p):
         """
@@ -296,7 +303,7 @@ class Agent(Server):
 
 
 class DStarLite(object):
-    def __init__(self, graph, goal):
+    def __init__(self, graph, goal, agent_id):
         """
         Find the path to the goal location from the current position
 
@@ -306,8 +313,6 @@ class DStarLite(object):
             Instance of the current graph
         goal: tuple
             Goal x and y coordinates
-        last_action: str
-            The direction of last move performed by the agent or an empty string
         """
 
         # Init the graph
@@ -317,7 +322,8 @@ class DStarLite(object):
         self.G_VALS = {}
         self.RHS_VALS = {}
         self.Km = 0
-        self.position = graph.current.location
+        self.agent_id = agent_id
+        self.position = graph.get_current(agent_id).location
         self.goal = goal
         self.queue = PriorityQueue()
         self.queue.put(self.goal, self.calculate_key(self.goal))
@@ -337,13 +343,23 @@ class DStarLite(object):
         to_node: tuple
             x and y coordinate of second node
         """
-        if from_node in self.graph.nodes and self.graph.nodes[from_node]._is_thing(self.graph.step, self.graph.current.location):
+
+        if from_node in self.graph.nodes and \
+                self.graph.nodes[from_node]._is_thing(self.graph.step,
+                                                      self.graph.get_current(
+                                                          self.agent_id).
+                                                      location):
             return float('inf')
 
-        if to_node in self.graph.nodes and self.graph.nodes[to_node]._is_thing(self.graph.step, self.graph.current.location):
+        if to_node in self.graph.nodes and \
+                self.graph.nodes[to_node]._is_thing(self.graph.step,
+                                                    self.graph.get_current(
+                                                        self.agent_id).
+                                                    location):
             return float('inf')
-        
-        if to_node in self.graph.nodes and self.graph.nodes[to_node]._is_obstacle():
+
+        if to_node in self.graph.nodes and \
+                self.graph.nodes[to_node]._is_obstacle():
             return 3
 
         return 1
@@ -351,8 +367,9 @@ class DStarLite(object):
     def neighbors(self, id):
         (x, y) = id
         results = [(x + 1, y), (x, y - 1), (x - 1, y), (x, y + 1)]
-        if (x + y) % 2 == 0: results.reverse()  # aesthetics
-        return results
+        if (x + y) % 2 == 0:
+            results.reverse()  # aesthetics
+        return [self.graph.modulate(coords) for coords in results]
 
     def calculate_rhs(self, node):
         lowest_cost_neighbour = self.lowest_cost_neighbour(node)
@@ -370,7 +387,9 @@ class DStarLite(object):
         return self.G_VALS.get(node, float('inf'))
 
     def rhs(self, node):
-        return self.RHS_VALS.get(node, float('inf')) if node != self.goal else 0
+        if node != self.goal:
+            return self.RHS_VALS.get(node, float('inf'))
+        return 0
 
     def heuristic(self, a, b):
         (x1, y1) = a
@@ -397,7 +416,9 @@ class DStarLite(object):
 
     def compute_shortest_path(self):
         last_nodes = deque(maxlen=10)
-        while len(self.queue.elements) and (self.queue.first_key() < self.calculate_key(self.position) or self.rhs(self.position) != self.g(self.position)):
+        while len(self.queue.elements) and \
+                (self.queue.first_key() < self.calculate_key(self.position) or
+                 self.rhs(self.position) != self.g(self.position)):
             k_old = self.queue.first_key()
             node = self.queue.pop()
             last_nodes.append(node)
@@ -424,14 +445,14 @@ class DStarLite(object):
             if self.g(self.position) == float('inf'):
                 return None
 
-            self.last_node = self.graph.current.location
+            self.last_node = self.graph.get_current(self.agent_id).location
 
             # return the next step to be taken
             return self.lowest_cost_neighbour(self.position)
         else:
             return None
-    
-    def update(self, graph, new_obs):
+
+    def update(self, graph):
         """
         Update the path if necessary.
 
@@ -439,22 +460,26 @@ class DStarLite(object):
         ----------
         graph: object
             The updated Graph instance.
-        new_obs: list
-            A list of the new walls, empty spaces, and agent locations in this step.
-        """        
+        """
         # Update observations
         self.graph = graph
-        self.position = graph.current.location
-        
+        self.position = graph.get_current(self.agent_id).location
+        new_obs = [obs for sublist in graph.new_obs.values() for obs in sublist]
+
         # Update the path if there are new observations
         if new_obs:
             self.Km += self.heuristic(self.last_node, self.position)
-            
+
             self.update_nodes({node for wallnode in new_obs
-                                for node in self.neighbors(wallnode)
-                                if (node not in self.graph.nodes or not self.graph.nodes[node]._is_thing(self.graph.step, self.graph.current.location))})
+                              for node in self.neighbors(wallnode)
+                              if (node not in self.graph.nodes or not
+                                  self.graph.nodes[node]._is_thing(
+                                      self.graph.step,
+                                      self.graph.get_current(self.agent_id).
+                                      location))})
+
             self.compute_shortest_path()
-        
+
 
 class PriorityQueue:
     def __init__(self):
@@ -484,6 +509,6 @@ class PriorityQueue:
 
 if __name__ == "__main__":
     agent = Agent("agentA0", "1", True)
-    
+
     # while True:
     msg = agent.receive_msg()

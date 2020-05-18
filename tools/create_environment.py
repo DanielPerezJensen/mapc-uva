@@ -33,6 +33,7 @@ def main():
     except FileNotFoundError:
         print("customMap.txt does not exist")
         print("Please create the customMap.txt file in the tools directory")
+        return
 
     # TODO: Add tasks and steps into customMap.txt and parse it nicely
     tasks = {'task1': (100, [(1, 0, 'b0')])}
@@ -122,8 +123,8 @@ def create_setup_file(mapping, tasks, output_file):
                 if '!' in element:
                     for adj_i, adj_j in get_adjacent(i, j):
                         if adj_i < w and adj_j < h:
-                            if mapping[adj_j][adj_i][0].isupper() or 'b' in mapping[adj_j][adj_i]:
-                                print('found valid attachment')
+                            if mapping[adj_j][adj_i][0].isupper() or \
+                               'b' in mapping[adj_j][adj_i]:
                                 attach_queue.append(
                                     f'attach {adj_i} {adj_j} {i} {j}\n')
 
