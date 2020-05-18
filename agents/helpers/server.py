@@ -3,11 +3,6 @@ import json
 import time
 from threading import Thread
 
-COLORS = ['\033[1;31m', '\033[1;32m', '\033[1;33m', '\033[1;34m', '\033[1;35m',
-          '\033[1;36m', '\033[1;37m', '\033[1;90m', '\033[1;91m', '\033[1;92m',
-          '\033[1;93m', '\033[1;94m', '\033[1;95m', '\033[1;96m', '\033[1;30m']
-END_COLOR = '\033[0;0m'
-
 
 class Server(Thread):
     """
@@ -34,6 +29,11 @@ class Server(Thread):
                             user[-1])
         self._pw = pw
         self._print_json = print_json
+        self._COLORS = ['\033[1;31m', '\033[1;32m', '\033[1;33m', '\033[1;34m',
+                        '\033[1;35m', '\033[1;36m', '\033[1;37m', '\033[1;90m',
+                        '\033[1;91m', '\033[1;92m', '\033[1;93m', '\033[1;94m',
+                        '\033[1;95m', '\033[1;96m', '\033[1;30m']
+        self._END_COLOR = '\033[0;0m'
 
         # Create, connect and authorize socket connection
         self.connect_socket()
