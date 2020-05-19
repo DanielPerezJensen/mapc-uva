@@ -68,7 +68,6 @@ class BDIAgent():
             self.last_intention = self.intention_queue.popleft()
 
             method, args, context, description, primitive = self.last_intention
-            print(description, args)
             if not primitive:
                 self.reduce_intention(self.last_intention)
                 return self.execute_intention()
