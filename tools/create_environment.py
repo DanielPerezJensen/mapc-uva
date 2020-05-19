@@ -42,7 +42,7 @@ def main():
         return
 
     # TODO: Add tasks and steps into customMap.txt and parse it nicely
-    tasks = {'task1': (100, [(1, 0, 'b0')])}
+    tasks = {'task1': (100, [(1, 0, 'b0')]), 'task2': (150, [(0, 1, 'b1')])}
     steps = 300
     fast_mode = True
     taskboards = 1

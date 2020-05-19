@@ -8,7 +8,6 @@ class Builder(Agent, BDIAgent):
     def __init__(self, user, pw, print_json=False):
         Agent.__init__(self, user, pw, print_json)
         BDIAgent.__init__(self)
-        self.current_task = None
 
     def get_intention(self):
         if not hasattr(self, 'ready'):
@@ -23,7 +22,8 @@ class Builder(Agent, BDIAgent):
 
     def debug(self):
         self.beliefs.things['dispensers']['b0'] = [(5, -4)]
-        self.beliefs.things['taskboards'].append((3, -6))
+        self.beliefs.things['dispensers']['b1'] = [(6, 9)]
+        self.beliefs.things['taskboards'].append((4, 11))
         self.beliefs.things['goals'].append((-7, 2))
         self.ready = True
 
@@ -42,33 +42,30 @@ class Builder(Agent, BDIAgent):
         task: dict
             The selected task.
         """
-        if self.current_task != task['name']:
-            # TODO: Find the most efficient path going past
-            # the taskboard and dispensers to the goal.
+        # TODO: Find the most efficient path going past
+        # the taskboard and dispensers to the goal.
 
-            # Get the required blocks from the task.
-            required = self._required_blocks(task)
+        # Get the required blocks from the task.
+        required = self._required_blocks(task)
 
-            # Check if it is known where taskboards,
-            # required dispensers and goal nodes are.
-            for thing, options in self.beliefs.things.items():
-                if thing == 'dispensers':
-                    for block_type in required:
-                        if block_type not in options:
-                            return tuple()
-                elif not options:
-                    return tuple()
+        # Check if it is known where taskboards,
+        # required dispensers and goal nodes are.
+        for thing, options in self.beliefs.things.items():
+            if thing == 'dispensers':
+                for block_type in required:
+                    if block_type not in options:
+                        return tuple()
+            elif not options:
+                return tuple()
 
-            # Create and return the new intentions
-            intentions = [self.get_task, self.get_blocks, self.submit_task]
-            args = [(task['name'],), (required,), (task['name'], required)]
-            contexts = [tuple(), tuple(), tuple()]
-            descriptions = ["getTask", "getBlocks", "submitTask"]
-            primitives = [False, False, False]
+        # Create and return the new intentions
+        intentions = [self.get_task, self.get_blocks, self.submit_task]
+        args = [(task['name'],), (required,), (task['name'], required)]
+        contexts = [tuple(), tuple(), tuple()]
+        descriptions = ["getTask", "getBlocks", "submitTask"]
+        primitives = [False, False, False]
 
-            self.current_task = task['name']
-            return intentions, args, contexts, descriptions, primitives
-        return tuple()
+        return intentions, args, contexts, descriptions, primitives
 
     def get_task(self, task_name):
         """
@@ -138,7 +135,8 @@ class Builder(Agent, BDIAgent):
         """
         # TODO: make it work for more than one attached block
 
-        turns = self._required_turns(pattern)
+        turns = self._required_turns(self.beliefs.attached[0],
+                                    list(pattern.values())[0][0])
         n_turns = len(turns)
         return (
             [self.rotate] * n_turns + [self.submit],
@@ -156,33 +154,42 @@ class Builder(Agent, BDIAgent):
         # TODO: turn the agent if there's already
         # a block attached on the side of the dispenser.
         direction = self.beliefs.get_direction(self._user_id, dispenser)
+
         return ([self.request, self.attach], [(direction,), (direction,)],
                 [tuple(), tuple()], ["requestBlock", "attachBlock"],
                 [True, True])
 
     # HELPER FUNCTIONS #
 
-    def _required_turns(self, pattern):
+    @staticmethod
+    def _required_turns(rel_from, rel_to):
         """
         Return the directions of the required turns for completing the task.
+
+        Parameters
+        -----------
+        rel_from: tuple
+            The relative location the agent wants to turn from.
+        rel_to: tuple
+            The relative location the agent wants the rel_from to turn to.
         """
-        attach_location = list(pattern.values())[0][0]
-        if self.beliefs.attached[0] == attach_location:
+
+        if rel_from == rel_to:
             # No rotation needed.
             return []
-        elif abs(self.beliefs.attached[0][0] - attach_location[0]) == 2 or \
-                abs(self.beliefs.attached[0][1] - attach_location[1]) == 2:
+        elif abs(rel_from[0] - rel_to[0]) == 2 or \
+                abs(rel_from[1] - rel_to[1]) == 2:
             # Block is on opposite side, rotate twice.
             return [('cw',), ('cw',)]
-        elif self.beliefs.attached[0][0] == 0:
-            if sum(np.array(self.beliefs.attached[0]) +
-                   np.array(attach_location[::-1])):
+        elif rel_from[0] == 0:
+            if sum(np.array(rel_from) +
+                   np.array(rel_to[::-1])):
                 return [('ccw',)]
             else:
                 return [('cw',)]
         else:
-            if sum(np.array(self.beliefs.attached[0]) +
-                   np.array(attach_location[::-1])):
+            if sum(np.array(rel_from) +
+                   np.array(rel_to[::-1])):
                 return [('cw',)]
             else:
                 return [('ccw')]

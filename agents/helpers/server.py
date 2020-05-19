@@ -135,7 +135,7 @@ class Server(Thread):
         """
 
         out = f"{self._COLORS[self._user_id % 15]}{self.name:<10}" + \
-              f"{self._END_COLOR} {msg:<50}"
+              f"{self._END_COLOR} {str(msg):<50}"
 
         if request_id:
             out += f" step {request_id}"
