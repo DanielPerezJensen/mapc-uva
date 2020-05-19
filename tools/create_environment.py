@@ -3,7 +3,6 @@ File to create a map from scratch for the agents.
 The environments are created directly in the server, so no further
 configuration is needed after running this file.
 """
-import sys
 import json
 import os
 
