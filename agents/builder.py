@@ -183,18 +183,27 @@ class Builder(Agent, BDIAgent):
             return [('cw',), ('cw',)]
         elif rel_from[0] == 0:
             if sum(np.array(rel_from) +
+<<<<<<< HEAD
                    np.array(rel_to[::-1])):
+=======
+                    np.array(rel_to[::-1])):
+>>>>>>> da7cf33616a810cbc0807bdd88a98f970a1dc44f
                 return [('ccw',)]
             else:
                 return [('cw',)]
         else:
             if sum(np.array(rel_from) +
+<<<<<<< HEAD
                    np.array(rel_to[::-1])):
+=======
+                    np.array(rel_to[::-1])):
+>>>>>>> da7cf33616a810cbc0807bdd88a98f970a1dc44f
                 return [('cw',)]
             else:
                 return [('ccw')]
 
-    def _required_blocks(self, task):
+    @staticmethod
+    def _required_blocks(task):
         required = defaultdict(list)
         for requirement in task['requirements']:
             required[requirement['type']].append(
