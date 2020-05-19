@@ -63,17 +63,12 @@ class BDIAgent():
         """
         Returns the action JSON resulting from the first intention in the queue
         """
-        # for intention in self.intention_queue:
-        #     print(intention.description, end=", ")
-        # print()
         
         if len(self.intention_queue) > 0:
             self.last_intention = self.intention_queue.popleft()
 
             method, args, context, description, primitive = self.last_intention
-
-            
-
+            print(description, args)
             if not primitive:
                 self.reduce_intention(self.last_intention)
                 return self.execute_intention()
@@ -85,8 +80,6 @@ class BDIAgent():
                         self.intention_queue.appendleft(self.last_intention)
                     else:
                         return self.execute_intention()
-
-                print("return value:", return_value)
                 return return_value
 
         else:

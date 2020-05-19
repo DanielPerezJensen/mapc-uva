@@ -156,8 +156,9 @@ class Builder(Agent, BDIAgent):
         # TODO: turn the agent if there's already
         # a block attached on the side of the dispenser.
         direction = self.beliefs.get_direction(self._user_id, dispenser)
-        return ([self.request], [(direction,)], [tuple()],
-                ["requestBlock"], [True])
+        return ([self.request, self.attach], [(direction,), (direction,)],
+                [tuple(), tuple()], ["requestBlock", "attachBlock"],
+                [True, True])
 
     # HELPER FUNCTIONS #
 
@@ -165,22 +166,22 @@ class Builder(Agent, BDIAgent):
         """
         Return the directions of the required turns for completing the task.
         """
-        attach_location = pattern.values()[0][0]
-        if self.attached[0] == attach_location:
+        attach_location = list(pattern.values())[0][0]
+        if self.beliefs.attached[0] == attach_location:
             # No rotation needed.
             return []
-        elif abs(self.attached[0][0] - attach_location[0]) == 2 or \
-                abs(self.attached[0][1] - attach_location[1]) == 2:
+        elif abs(self.beliefs.attached[0][0] - attach_location[0]) == 2 or \
+                abs(self.beliefs.attached[0][1] - attach_location[1]) == 2:
             # Block is on opposite side, rotate twice.
             return [('cw',), ('cw',)]
-        elif self.attached[0][0] == 0:
-            if sum(np.array(self.attached[0]) +
+        elif self.beliefs.attached[0][0] == 0:
+            if sum(np.array(self.beliefs.attached[0]) +
                    np.array(attach_location[::-1])):
                 return [('ccw',)]
             else:
                 return [('cw',)]
         else:
-            if sum(np.array(self.attached[0]) +
+            if sum(np.array(self.beliefs.attached[0]) +
                    np.array(attach_location[::-1])):
                 return [('cw',)]
             else:

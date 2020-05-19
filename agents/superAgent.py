@@ -48,11 +48,10 @@ class SuperAgent(*AGENTS, BDIAgent):
 
                         self.add_intention(*intention_addition)
                     request_id = self._get_request_id(msg)
-                    if request_id == 8:
-                        print("step 8")
+                    # if request_id == 8:
+                    #     print("step 8")
                     action = self.execute_intention()
                     
-                    print("action in superAgent:", action)
                     if action:
                         self.send_request(self._add_request_id(action,
                                           request_id))
