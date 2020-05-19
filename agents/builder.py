@@ -138,7 +138,8 @@ class Builder(Agent, BDIAgent):
         """
         # TODO: make it work for more than one attached block
 
-        turns = self._required_turns(pattern)
+        turns = self._required_turns(self.beliefs.attached[0],
+                                     list(pattern.values())[0][0])
         n_turns = len(turns)
         return (
             [self.rotate] * n_turns + [self.submit],
@@ -162,32 +163,41 @@ class Builder(Agent, BDIAgent):
 
     # HELPER FUNCTIONS #
 
-    def _required_turns(self, pattern):
+    @staticmethod
+    def _required_turns(rel_from, rel_to):
         """
         Return the directions of the required turns for completing the task.
+
+        Parameters
+        -----------
+        rel_from: tuple
+            The relative location the agent wants to turn from.
+        rel_to: tuple
+            The relative location the agent wants the rel_from to turn to.
         """
-        attach_location = list(pattern.values())[0][0]
-        if self.beliefs.attached[0] == attach_location:
+
+        if rel_from == rel_to:
             # No rotation needed.
             return []
-        elif abs(self.beliefs.attached[0][0] - attach_location[0]) == 2 or \
-                abs(self.beliefs.attached[0][1] - attach_location[1]) == 2:
+        elif abs(rel_from[0] - rel_to[0]) == 2 or \
+                abs(rel_from[1] - rel_to[1]) == 2:
             # Block is on opposite side, rotate twice.
             return [('cw',), ('cw',)]
-        elif self.beliefs.attached[0][0] == 0:
-            if sum(np.array(self.beliefs.attached[0]) +
-                   np.array(attach_location[::-1])):
+        elif rel_from[0] == 0:
+            if sum(np.array(rel_from) +
+                    np.array(rel_to[::-1])):
                 return [('ccw',)]
             else:
                 return [('cw',)]
         else:
-            if sum(np.array(self.beliefs.attached[0]) +
-                   np.array(attach_location[::-1])):
+            if sum(np.array(rel_from) +
+                    np.array(rel_to[::-1])):
                 return [('cw',)]
             else:
                 return [('ccw')]
 
-    def _required_blocks(self, task):
+    @staticmethod
+    def _required_blocks(task):
         required = defaultdict(list)
         for requirement in task['requirements']:
             required[requirement['type']].append(
