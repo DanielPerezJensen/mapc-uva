@@ -130,11 +130,12 @@ class Server(Thread):
         msg: str
             The message to send to the server
         request_id: str, optional
-            The latest request-id from the server. 
+            The latest request-id from the server.
             If provided, prints the current step.
         """
 
-        out = f"{COLORS[self._user_id % 15]}{self.name:<10}{END_COLOR} {msg:<50}"
+        out = f"""{self._COLORS[self._user_id % 15]}
+                  {self.name:<10}{self._END_COLOR} {msg:<50}"""
 
         if request_id:
             out += f" step {request_id}"
