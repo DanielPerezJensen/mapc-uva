@@ -5,7 +5,7 @@ from queue import Queue
 
 n_agents = 15
 agent_list = []
-input_queue, output_queue = Queue(maxsize=n_agents), Queue(maxsize=0)
+input_queue, output_queue = Queue(maxsize=n_agents), Queue(maxsize=n_agents)
 
 strategist = Strategist(f"Strategist", [input_queue, output_queue])
 strategist.start()

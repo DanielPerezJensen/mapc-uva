@@ -40,11 +40,11 @@ class SuperAgent(*AGENTS, BDIAgent):
             if msg:
                 # Parse the response.
                 if msg["type"] == "request-action":
+
                     # Get the request id
                     request_id = self._get_request_id(msg)
                     agent_id = self._user_id
 
-                    
                     # Update beliefs
                     self.beliefs.update(msg, agent_id)
 
@@ -52,8 +52,12 @@ class SuperAgent(*AGENTS, BDIAgent):
                     # beliefs. Agent can continue when all agents updated their
                     # belief.
                     if hasattr(self, 'input_queue'):
-                        self.input_queue.put(('update beliefs', agent_id))
+                        self.input_queue.put(('update', self))
                         self.input_queue.join()
+
+                        self.input_queue.put(('merge', self))
+                        self.input_queue.join()
+                        strategist.merged_agents = []
 
                     # TODO: Listen to strategist thread for role
 
@@ -66,7 +70,7 @@ class SuperAgent(*AGENTS, BDIAgent):
                     # Makes the agents walk around randomly
                     options = ['single', 'random', 'east']
                     action = selected_agent.explore(self, agent_id, options)
-                    #action = self.skip()
+                    # action = self.skip()
 
                     # Send action to server
                     self.send_request(self._add_request_id(action[0],

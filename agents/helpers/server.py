@@ -35,8 +35,8 @@ class Server(Thread):
         if user == 'Strategist':
             self._user_id = 0
         else:
-            self._user_id = int((user[-2] if user[-2].isdigit() else "") + 
-                            user[-1])
+            self._user_id = int((user[-2] if user[-2].isdigit() else "") +
+                                user[-1])
             self._pw = pw
             # Create, connect and authorize socket connection
             self.connect_socket()

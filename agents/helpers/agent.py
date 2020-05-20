@@ -464,7 +464,8 @@ class DStarLite(object):
         # Update observations
         self.graph = graph
         self.position = graph.get_current(self.agent_id).location
-        new_obs = [obs for sublist in graph.new_obs.values() for obs in sublist]
+        new_obs = [obs for sublist in graph.new_obs.values() for
+                   obs in sublist]
 
         # Update the path if there are new observations
         if new_obs:
