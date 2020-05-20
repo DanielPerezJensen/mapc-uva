@@ -11,10 +11,12 @@ AGENTS = [Attacker, Builder, Defender, Mapper, Spy]
 
 class SuperAgent(*AGENTS, BDIAgent):
 
-    def __init__(self, user, pw, print_json=False, timer=False):
+    def __init__(self, user, pw, print_json=False,
+                 timer=False, print_queue=False):
         super().__init__(user, pw, print_json)
         BDIAgent.__init__(self)
         self._timer = timer
+        self._print_queue = print_queue
 
     def run(self):
         """
@@ -23,6 +25,7 @@ class SuperAgent(*AGENTS, BDIAgent):
         while True:
             # Receive a message.
             msg = self.receive_msg()
+            # time.sleep(0.5)  # uncomment to add delay per step in agent.
 
             if msg:
                 # Parse the response.
@@ -40,20 +43,30 @@ class SuperAgent(*AGENTS, BDIAgent):
                         if self.last_intention.method.__name__ != "nav_to":
                             self.add_last_intention()
 
+                    if self._print_queue:
+                        self.pretty_print([x.description
+                                           for x in self.intention_queue])
+
                     # If intention queue is empty add intention (temporary)
                     if not self.intention_queue:
                         # Get intention from agent_type
                         intention_addition = agent_type.get_intention(self)
 
-                        self.add_intention(*intention_addition)
+                        if intention_addition:
+                            print("got intention")
+                            self.add_intention(*intention_addition)
+
+                    request_id = self._get_request_id(msg)
 
                     action = self.execute_intention()
+
                     if action:
-                        request_id = self._get_request_id(msg)
                         self.send_request(self._add_request_id(action,
                                           request_id))
                     else:
                         action = self.skip()
+                        self.send_request(
+                            self._add_request_id(action, request_id))
                         self.pretty_print("Done with action", request_id)
 
                     # # Makes the agents walk around randomly
