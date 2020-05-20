@@ -47,9 +47,9 @@ class Server(Thread):
         try:
             self.socket.connect((host, port))
         # In case of error throw error message
-        except Exception as e:
+        except ConnectionRefusedError:
             print("Could not connect to port")
-            raise e
+            return
 
     def authorize_socket(self):
         """
@@ -129,10 +129,9 @@ class Server(Thread):
         msg: str
             The message to send to the server
         request_id: str, optional
-            The latest request-id from the server. 
+            The latest request-id from the server.
             If provided, prints the current step.
         """
-
         out = f"{self._COLORS[self._user_id % 15]}{self.name:<10}" + \
               f"{self._END_COLOR} {str(msg):<50}"
 
