@@ -11,7 +11,7 @@ AGENTS = [Attacker, Builder, Defender, Mapper, Spy]
 
 class SuperAgent(*AGENTS, BDIAgent):
 
-    def __init__(self, user, pw, print_json=False, 
+    def __init__(self, user, pw, print_json=False,
                  timer=False, print_queue=False):
         super().__init__(user, pw, print_json)
         BDIAgent.__init__(self)
