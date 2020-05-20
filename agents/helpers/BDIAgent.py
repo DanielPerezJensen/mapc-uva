@@ -63,7 +63,7 @@ class BDIAgent():
         """
         Returns the action JSON resulting from the first intention in the queue
         """
-        
+
         if len(self.intention_queue) > 0:
             self.last_intention = self.intention_queue.popleft()
 

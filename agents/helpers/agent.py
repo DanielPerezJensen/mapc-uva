@@ -74,23 +74,7 @@ class Agent(Server):
 
         curr_loc = self.beliefs.get_current(agent_id).location
 
-        rel_n_x = new_loc[0] - curr_loc[0]
-
-        if len(self.beliefs.attached) == 1:
-            if rel_n_x:
-                narrow = self.beliefs.nodes[new_loc].get_direction(direction='n')._is_obstacle() and
-                self.beliefs.nodes[new_loc].get_direction(direction='s')._is_obstacle()
-            else:
-                narrow = self.beliefs.nodes[new_loc].get_direction(direction='e')._is_obstacle() and
-                self.beliefs.nodes[new_loc].get_direction(direction='w')._is_obstacle()
-            
-            if narrow:
-
-            
-
         direction = self.beliefs.get_direction(agent_id, new_loc)
-
-        sides = {'n': ('w', 'e'), 'e': ('n', 's'), 's': ('w', 'e'), 'w': ('n', 's')}
 
         if self.beliefs.nodes[new_loc]._is_obstacle():
             clear_pos_x = (new_loc[0] - curr_loc[0]) * 2
@@ -325,31 +309,6 @@ class Agent(Server):
         }
         # Return the action.
         return action
-
-    @staticmethod
-    def _required_turns(rel_from, rel_to):
-    """
-    Return the directions of the required turns for completing the task.
-    """
-    if rel_from == rel_to:
-        # No rotation needed.
-        return []
-    elif abs(rel_from[0] - rel_to[0]) == 2 or \
-            abs(rel_from[1] - rel_to[1]) == 2:
-        # Block is on opposite side, rotate twice.
-        return [('cw',), ('cw',)]
-    elif rel_from[0] == 0:
-        if sum(np.array(rel_from) +
-                np.array(rel_to[::-1])):
-            return [('ccw',)]
-        else:
-            return [('cw',)]
-    else:
-        if sum(np.array(rel_from) +
-                np.array(rel_to[::-1])):
-            return [('cw',)]
-        else:
-            return [('ccw')]
 
 
 class DStarLite(object):

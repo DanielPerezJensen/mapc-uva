@@ -11,7 +11,8 @@ AGENTS = [Attacker, Builder, Defender, Mapper, Spy]
 
 class SuperAgent(*AGENTS, BDIAgent):
 
-    def __init__(self, user, pw, print_json=False, timer=False, print_queue=False):
+    def __init__(self, user, pw, print_json=False, 
+                 timer=False, print_queue=False):
         super().__init__(user, pw, print_json)
         BDIAgent.__init__(self)
         self._timer = timer
@@ -43,7 +44,8 @@ class SuperAgent(*AGENTS, BDIAgent):
                             self.add_last_intention()
 
                     if self._print_queue:
-                        self.pretty_print([x.description for x in self.intention_queue])
+                        self.pretty_print([x.description
+                                           for x in self.intention_queue])
 
                     # If intention queue is empty add intention (temporary)
                     if not self.intention_queue:
@@ -57,7 +59,7 @@ class SuperAgent(*AGENTS, BDIAgent):
                     request_id = self._get_request_id(msg)
 
                     action = self.execute_intention()
-                    
+
                     if action:
                         self.send_request(self._add_request_id(action,
                                           request_id))

@@ -136,7 +136,7 @@ class Builder(Agent, BDIAgent):
         # TODO: make it work for more than one attached block
 
         turns = self._required_turns(self.beliefs.attached[0],
-                                    list(pattern.values())[0][0])
+                                     list(pattern.values())[0][0])
         n_turns = len(turns)
         return (
             [self.rotate] * n_turns + [self.submit],
