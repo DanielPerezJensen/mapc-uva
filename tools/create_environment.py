@@ -3,7 +3,6 @@ File to create a map from scratch for the agents.
 The environments are created directly in the server, so no further
 configuration is needed after running this file.
 """
-import sys
 import json
 import os
 
@@ -20,6 +19,12 @@ def main():
     A task can be created in the dictionary as follows:
     {'task_name': (duration, [(x1, y1, block), (x2, y2, block)])}
     Where the coordinates are relative to the agent.
+
+    Taskboards refers to the number of taskboards in the game, these can only
+    be generated at a random location.
+    Steps refers to the amount of steps for the simulation.
+    If fast_mode is set to false, extra agents are moved outside the map,
+    this ensures that the game will not skip through the steps.
     """
 
     # get the prefix of the tools directory
@@ -36,8 +41,11 @@ def main():
         return
 
     # TODO: Add tasks and steps into customMap.txt and parse it nicely
-    tasks = {'task1': (100, [(1, 0, 'b0')])}
+    tasks = {'task1': (100, [(1, 0, 'b0')]), 'task2': (150, [(0, 1, 'b1')])}
     steps = 300
+    fast_mode = True
+    taskboards = 1
+    #########################
 
     # get path to config, request it if it does not yet exist
     path_to_config = get_path_to_config(tools_prefix)
@@ -62,12 +70,20 @@ def main():
         sample_config[team] = {"prefix": "agent", "password": "1"}
 
     # edit sample simulation
+    if fast_mode:
+        sample_sim["entities"]["standard"] = len(config["agent_ids"])
+    else:
+        n_agents = len(config["agent_ids"]) + 1
+        sample_sim["entities"]["standard"] = n_agents
+        for i, team in enumerate(config['teams']):
+            setup_file.write(f"move {i} {len(mapping)} agent{team}{n_agents}")
+
     sample_sim["grid"]["height"] = len(mapping)
     sample_sim["grid"]["width"] = len(mapping[0])
     sample_sim["blockTypes"] = 2 * [len(config['blocks'])]
     sample_sim["setup"] = 'conf/' + setup_name
     sample_sim["steps"] = steps
-    sample_sim["entities"]["standard"] = len(config["agent_ids"])
+    sample_sim["tasks"]["taskboards"] = taskboards
 
     # write results
     with open(path_to_config + config_name, "w") as f:

@@ -4,6 +4,7 @@ if __name__ == "__main__":
 
 else:
     from .helpers import Agent
+    from .helpers import BDIAgent
 
 
 class Tester(Agent, BDIAgent):

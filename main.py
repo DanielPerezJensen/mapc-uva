@@ -1,4 +1,3 @@
-import sys
 from agents import SuperAgent
 
 n_agents = 1

@@ -1,6 +1,5 @@
 import socket
 import json
-import time
 from threading import Thread
 
 
@@ -134,7 +133,8 @@ class Server(Thread):
             If provided, prints the current step.
         """
 
-        out = f"{COLORS[self._user_id % 15]}{self.name:<10}{END_COLOR} {msg:<50}"
+        out = f"{self._COLORS[self._user_id % 15]}{self.name:<10}" + \
+              f"{self._END_COLOR} {str(msg):<50}"
 
         if request_id:
             out += f" step {request_id}"
