@@ -48,9 +48,9 @@ class Server(Thread):
         try:
             self.socket.connect((host, port))
         # In case of error throw error message
-        except Exception as e:
+        except ConnectionRefusedError:
             print("Could not connect to port")
-            raise e
+            return
 
     def authorize_socket(self):
         """
