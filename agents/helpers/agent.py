@@ -1,10 +1,11 @@
 from collections import deque
 from functools import partial
 import heapq
+import math
 
 if __name__ == "__main__":
     from server import Server
-    from graph import Graph
+    from graph import graph
 else:
     from .server import Server
     from .graph import Graph
@@ -312,27 +313,28 @@ class Agent(Server):
 
 
 class DStarLite(object):
-    def __init__(self, graph, goal, agent_id):
+    def __init__(self, beliefs, goal, agent_id):
         """
         Find the path to the goal location from the current position
 
         parameters
         ----------
-        graph: object
-            Instance of the current graph
+        beliefs: object
+            Instance of the current beliefs
         goal: tuple
             Goal x and y coordinates
         """
 
-        # Init the graph
-        self.graph = graph
+        # Init the beliefs
+        self.beliefs = beliefs
+        self.obstacle_cost = 32 * math.e ** (-0.008 * self.beliefs.energy)
 
         self.back_pointers = {}
         self.G_VALS = {}
         self.RHS_VALS = {}
         self.Km = 0
         self.agent_id = agent_id
-        self.position = graph.get_current(agent_id).location
+        self.position = beliefs.get_current(agent_id).location
         self.goal = goal
         self.queue = PriorityQueue()
         self.queue.put(self.goal, self.calculate_key(self.goal))
@@ -340,6 +342,31 @@ class DStarLite(object):
 
         # Create initial path to goal
         self.compute_shortest_path()
+
+    def old_transition_cost(self, from_node, to_node):
+        """
+        Returns the cost of the node transition.
+
+        parameters
+        ----------
+        from_node: tuple
+            x and y coordinate of first node
+        to_node: tuple
+            x and y coordinate of second node
+        """
+
+        for node in [from_node, to_node]:
+            if node in self.beliefs.nodes and \
+                self.beliefs.nodes[node]._is_thing(self.beliefs.step,
+                                                   self.beliefs.get_current(
+                                                    self.agent_id).location):
+                return float('inf')
+
+        if to_node in self.beliefs.nodes and \
+                self.beliefs.nodes[to_node]._is_obstacle():
+            return self.obstacle_cost
+
+        return 1
 
     def transition_cost(self, from_node, to_node):
         """
@@ -353,23 +380,21 @@ class DStarLite(object):
             x and y coordinate of second node
         """
 
-        if from_node in self.graph.nodes and \
-                self.graph.nodes[from_node]._is_thing(self.graph.step,
-                                                      self.graph.get_current(
-                                                          self.agent_id).
-                                                      location):
-            return float('inf')
+        for node in [from_node, to_node]:
+            if node in self.beliefs.nodes and \
+                self.beliefs.nodes[node]._is_thing(self.beliefs.step,
+                                                   self.beliefs.get_current(
+                                                    self.agent_id).location):
+                return float('inf')
 
-        if to_node in self.graph.nodes and \
-                self.graph.nodes[to_node]._is_thing(self.graph.step,
-                                                    self.graph.get_current(
-                                                        self.agent_id).
-                                                    location):
-            return float('inf')
-
-        if to_node in self.graph.nodes and \
-                self.graph.nodes[to_node]._is_obstacle():
-            return 3
+        if len(self.beliefs.attached):
+            if to_node in self.beliefs.nodes and \
+                    self.beliefs.nodes[to_node]._is_exp_obstacle():
+                return float('inf')
+        else:
+            if to_node in self.beliefs.nodes and \
+                    self.beliefs.nodes[to_node]._is_obstacle():
+                return 32 * math.e ** (-0.008 * self.beliefs.energy)
 
         return 1
 
@@ -378,7 +403,7 @@ class DStarLite(object):
         results = [(x + 1, y), (x, y - 1), (x - 1, y), (x, y + 1)]
         if (x + y) % 2 == 0:
             results.reverse()  # aesthetics
-        return [self.graph.modulate(coords) for coords in results]
+        return [self.beliefs.modulate(coords) for coords in results]
 
     def calculate_rhs(self, node):
         lowest_cost_neighbour = self.lowest_cost_neighbour(node)
@@ -454,26 +479,33 @@ class DStarLite(object):
             if self.g(self.position) == float('inf'):
                 return None
 
-            self.last_node = self.graph.get_current(self.agent_id).location
+            self.last_node = self.beliefs.get_current(self.agent_id).location
 
             # return the next step to be taken
             return self.lowest_cost_neighbour(self.position)
         else:
             return None
 
-    def update(self, graph):
+    def update(self, beliefs):
         """
         Update the path if necessary.
 
         parameters
         ----------
-        graph: object
-            The updated Graph instance.
+        beliefs: object
+            The updated beliefs instance.
         """
         # Update observations
-        self.graph = graph
-        self.position = graph.get_current(self.agent_id).location
-        new_obs = [obs for sublist in graph.new_obs.values() for obs in sublist]
+        self.beliefs = beliefs
+        self.obstacle_cost = 32 * math.e ** (-0.008 * self.beliefs.energy)
+        self.position = beliefs.get_current(self.agent_id).location
+        new_obs = [obs for sublist in beliefs.new_obs.values()
+                   for obs in sublist]
+
+        # if self.beliefs.attached:
+        #     for x in range(self.position[0] - 1, self.position[0] + 2):
+        #         for y in range(self.position[1] - 1, self.position[1] + 2):
+        #             print(self.beliefs.exp_nodes[(x, y)])
 
         # Update the path if there are new observations
         if new_obs:
@@ -481,10 +513,10 @@ class DStarLite(object):
 
             self.update_nodes({node for wallnode in new_obs
                               for node in self.neighbors(wallnode)
-                              if (node not in self.graph.nodes or not
-                                  self.graph.nodes[node]._is_thing(
-                                      self.graph.step,
-                                      self.graph.get_current(self.agent_id).
+                              if (node not in self.beliefs.nodes or not
+                                  self.beliefs.nodes[node]._is_thing(
+                                      self.beliefs.step,
+                                      self.beliefs.get_current(self.agent_id).
                                       location))})
 
             self.compute_shortest_path()

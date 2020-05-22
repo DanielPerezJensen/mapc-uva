@@ -28,6 +28,7 @@ class Node(object):
             The node to the corresponding direction of this node.
         """
         self.location = location
+        self.surr_obstacles = 0
         self.terrain = (terrain, step)
         if things == {}:
             self.things = {}
@@ -195,10 +196,14 @@ class Node(object):
                     return (x+1, y)
 
         else:
-            return [self.get_direction(width=width, height=height, direction='n'),
-                    self.get_direction(width=width, height=height, direction='e'),
-                    self.get_direction(width=width, height=height, direction='s'),
-                    self.get_direction(width=width, height=height, direction='w')]
+            return [self.get_direction(width=width,
+                    height=height, direction='n'),
+                    self.get_direction(width=width,
+                    height=height, direction='e'),
+                    self.get_direction(width=width,
+                    height=height, direction='s'),
+                    self.get_direction(width=width,
+                    height=height, direction='w')]
 
     def add_direction(self, north=None, east=None, south=None, west=None):
         """
@@ -230,7 +235,11 @@ class Node(object):
         # check for obstacles
         if self.terrain[0] == 'obstacle':
             return True
+        return False
 
+    def _is_exp_obstacle(self):
+        if self.terrain[0] == 'obstacle' or self.surr_obstacles:
+            return True
         return False
 
     def _is_thing(self, step, agent_location, things=['block', 'entity']):
@@ -258,6 +267,51 @@ class Node(object):
         return False
 
 
+# class ExpNode(object):
+#     def __init__(self, location, terrain='empty', things={},
+#                  surr_obstacles=0):
+#         """
+#         Initialise the node and create attribute with default values.
+#         Terrain and step get combined into a tuple for easier use
+
+#         Arguments
+#         ---------
+#         location: tuple(int, int)
+#             A tuple containing the x, y coordinate of the node relative to the
+#             graph's initial node.
+#         terrain: str
+#             The type of terrain (empty, obstacle, goal).
+#         things: {step:thing}
+#             A dictionary containing a list of things (value) in the node
+#             (entities, blocks, dispensers, markers) on a certain step (key).
+#         """
+#         self.location = location
+#         self.terrain = terrain
+#         self.surr_obstacles = surr_obstacles
+#         # if things == {}:
+#         #     self.things = {}
+#         # else:
+#         #     self.things = things
+
+#     def set_terrain(self, terrain):
+#         self.terrain = terrain
+
+#     def _is_obstacle(self):
+#         """
+#         Determine if a node is an obstacle block.
+#         Parameters
+#         ---------
+#         step: int
+#             Current game step.
+#         agent_location: (int, int)
+#             The location of the agent itself.
+#         """
+#         # check for obstacles
+#         if self.terrain == 'obstacle' or self.surr_obstacles:
+#             return True
+#         return False
+
+
 class Graph(object):
     """
     Create a graph used by the agents to help naviagate and store information
@@ -279,13 +333,15 @@ class Graph(object):
         for x in range(-5, 6):
             for y in range(-5, 6):
                 if abs(x) + abs(y) < 6:
-                    self.nodes[self.modulate((x, y))] = Node(self.modulate((x, y)))
+                    loc = self.modulate((x, y))
+                    self.nodes[loc] = Node(self.modulate((x, y)))
 
         self.current = {agent_id: self.nodes[(0, 0)]}
         self.things = {'goals': [], 'dispensers': {}, 'taskboards': []}
         self.tasks = {}
         self.new_obs = {'obstacles': [], 'empty': [], 'agents': []}
         self.attached = []
+        self.energy = 300
 
         for node in self.nodes.values():
             x, y = node.location
@@ -346,11 +402,13 @@ class Graph(object):
                 if node not in vision or vision[node]['terrain'] == 'empty':
                     self.nodes[node].set_terrain('empty', step)
                     new_empty.append(node)
+                    self.update_surroundings(node, step, operation='decrease')
 
             if node in vision:
                 if self.nodes[node].get_terrain()[0] == 'empty' and \
                         vision[node]['terrain'] == 'obstacle':
                     new_obstacles.append(node)
+                    self.update_surroundings(node, step)
 
                 self.nodes[node].set_terrain(vision[node]['terrain'], step)
                 self.nodes[node].add_things(vision[node]['things'], step)
@@ -360,6 +418,24 @@ class Graph(object):
         self.tasks = msg["content"]["percept"]["tasks"]
         self.attached = [tuple(x) for x in
                          msg["content"]["percept"]["attached"]]
+        self.energy = msg["content"]["percept"]["energy"]
+
+    def update_surroundings(self, node, step, operation='increase'):
+        # print("updating node:", node)
+        if operation == 'increase':
+            add = 1
+        else:
+            add = -1
+
+        for x in range(node[0] - 1, node[0] + 2):
+            for y in range(node[1] - 1, node[1] + 2):
+                loc = self.modulate((x, y))
+                if loc != node:
+                    if loc in self.nodes:
+                        self.nodes[loc].surr_obstacles += add
+                    else:
+                        self.nodes[loc] = Node(loc, step=step)
+                        self.nodes[loc].surr_obstacles += add
 
     def update_current(self, msg, agent_id):
         """
