@@ -1,12 +1,6 @@
 import socket
 import json
-import time
 from threading import Thread
-
-COLORS = ['\033[1;31m', '\033[1;32m', '\033[1;33m', '\033[1;34m', '\033[1;35m',
-          '\033[1;36m', '\033[1;37m', '\033[1;90m', '\033[1;91m', '\033[1;92m',
-          '\033[1;93m', '\033[1;94m', '\033[1;95m', '\033[1;96m', '\033[1;30m']
-END_COLOR = '\033[0;0m'
 
 
 class Server(Thread):
@@ -30,14 +24,19 @@ class Server(Thread):
         """
         super().__init__(name=user)
         self._user = user
+        self._pw = pw
         self._print_json = print_json
+        self._COLORS = ['\033[1;31m', '\033[1;32m', '\033[1;33m', '\033[1;34m',
+                        '\033[1;35m', '\033[1;36m', '\033[1;37m', '\033[1;90m',
+                        '\033[1;91m', '\033[1;92m', '\033[1;93m', '\033[1;94m',
+                        '\033[1;95m', '\033[1;96m', '\033[1;30m']
+        self._END_COLOR = '\033[0;0m'
 
         if user == 'Strategist':
             self._user_id = 0
         else:
             self._user_id = int((user[-2] if user[-2].isdigit() else "") +
                                 user[-1])
-            self._pw = pw
             # Create, connect and authorize socket connection
             self.connect_socket()
             self.authorize_socket()
@@ -51,9 +50,9 @@ class Server(Thread):
         try:
             self.socket.connect((host, port))
         # In case of error throw error message
-        except Exception as e:
+        except ConnectionRefusedError:
             print("Could not connect to port")
-            raise e
+            return
 
     def authorize_socket(self):
         """
@@ -74,9 +73,9 @@ class Server(Thread):
         response = self.receive_msg()
 
         if response["content"]["result"] == "ok":
-            print(f"{COLORS[self._user_id % 15]}{self.name:<10}{END_COLOR} connection succesful")
+            self.pretty_print("connection succesful")
         else:
-            print(f"{COLORS[self._user_id % 15]}{self.name:<10}{END_COLOR} connection failed")
+            self.pretty_print("connection failed")
 
     def close_socket(self):
         """
@@ -96,8 +95,10 @@ class Server(Thread):
         """
         # Print the request if required.
         if request['type'] == "action":
-            content = f"{request['content']['type']}" + (f" {request['content']['p']}" if list(request['content']['p']) else "")
-            print(f"{COLORS[self._user_id % 15]}{self.name:<10}{END_COLOR} {content:<50} step {request['content']['id']}")
+            content = f"{request['content']['type']}" + \
+                    (f" {request['content']['p']}" if
+                        list(request['content']['p']) else "")
+            self.pretty_print(content, self._get_request_id(request))
 
         if self._print_json:
             print(request)
@@ -120,6 +121,27 @@ class Server(Thread):
             return json.loads(msg)
         else:
             return None
+
+    def pretty_print(self, msg, request_id=""):
+        """
+        Prints a well formatted message including the agent
+        name and optionally with the current step information.
+
+        parameters
+        ----------
+        msg: str
+            The message to send to the server
+        request_id: str, optional
+            The latest request-id from the server.
+            If provided, prints the current step.
+        """
+        out = f"{self._COLORS[self._user_id % 15]}{self.name:<10}" + \
+              f"{self._END_COLOR} {str(msg):<50}"
+
+        if request_id:
+            out += f" step {request_id}"
+
+        print(out)
 
     @staticmethod
     def _get_request_id(action_request):

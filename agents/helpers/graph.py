@@ -287,7 +287,9 @@ class Graph(object):
                         Node(self.modulate((x, y)))
         self.current = {agent_id: self.nodes[(0, 0)]}
         self.things = {'goals': [], 'dispensers': {}, 'taskboards': []}
+        self.tasks = {}
         self.new_obs = {'obstacles': [], 'empty': [], 'agents': []}
+        self.attached = []
 
         for node in self.nodes.values():
             x, y = node.location
@@ -359,6 +361,9 @@ class Graph(object):
 
         self.new_obs = {'obstacles': new_obstacles, 'empty': new_empty,
                         'agents': self.get_new_agents(vision, agent_id)}
+        self.tasks = msg["content"]["percept"]["tasks"]
+        self.attached = [tuple(x) for x in
+                         msg["content"]["percept"]["attached"]]
 
     def update_current(self, msg, agent_id):
         """

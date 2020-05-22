@@ -188,6 +188,13 @@ class Strategist(Server):
                     for agent in new_graph.current:
                             self.get_agent(agent).beliefs = new_graph
 
+                else:
+                    """
+                    Determine width or heigth when main_agent.location
+                    + location != agent.location
+                    """
+                    pass
+
     def get_number_graphs(self):
         """
         Returns the total number of graphs used by all the agents combined.

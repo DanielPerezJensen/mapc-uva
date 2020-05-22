@@ -3,74 +3,113 @@ import random
 
 
 class Mapper(Agent):
-    def refresh(self, mode='landmarks'):
-        """
-        Go to either unvisited location or important areas of the map.
-        """
-        if mode == 'landmarks':
-            pass  # Visit the important areas of the map
-        else:
-            pass  # Visit the areas that haven't been visited in a while
+    def __init__(self, user, pw, print_json=False):
+        Agent.__init__(self, user, pw, print_json)
 
-    def explore(self, agent_id, options=['single', 'random', 'east']):
-        self.options = options
-        if self.options[0] == 'multi':
-            """
-            1) Broadcast location and find another agent to explore with
-                If no connection can be made, do single_agent_explore()
-            2) Merge maps based on locations
-            """
-            teammate = "A2"  # agent_broadcast()
-            if teammate:
-                action = self.multi_agent_explore(agent_id, teammate=teammate)
-                return action
-
-        action = self.single_agent_explore(agent_id)
-        return action
-
-    def single_agent_explore(self, agent_id):
+    def get_intention(self):
         """
-        Different mode of single agent exploration.
-        Serpentine and random will both use pattern recognition to determine
-        if the agent has looped the map.
+        Gets intentions of this type of agent.
         """
-        if self.options[1] == 'random':
-            return self.single_agent_random(agent_id)
-        elif self.options[1] == 'serpentine':
-            return self.single_agent_zig_zag(agent_id)
-        elif self.options[1] == 'tghm':
-            return self.single_agent_tghm()
-        else:
-            return None
 
-    def single_agent_random(self, agent_id, min_max=range(5, 15)):
+        # TODO: Actual action selection
+        selected_action = self.zigzag_move()
+
+        return selected_action
+
+    def random_move(self, r_range=range(5, 15)):
         """
-        Explore the world by going to random locations. A random location is
-        chosen as goal. If the agent reaches the goal location or it is not
-        reachable, a new goal is chosen.
+        Set a random goal for the agent to move towards (within a
+        certain range).
 
         Arguments
         ---------
-        new_obs: list
-            A list of the new observations.
-        min_max: (int, int)
-            The range in which the coordinates will be randomly chosen.
+        r_range: list
+            The range in which the x and y coordinates will be chosen.
         """
-        r = list(min_max) + [-x for x in list(min_max)]
-        if not hasattr(self, 'r_goal'):
-            self.r_goal = [random.choice(r), random.choice(r)]
+        r_range = list(r_range) + [-x for x in list(r_range)]
+        goal = (random.choice(r_range), random.choice(r_range))
 
-        action = self.nav_to((self.r_goal[0], self.r_goal[1]),
-                             agent_id)
+        return ([self.nav_to],
+                [(goal, self._user_id)],
+                [tuple()],
+                ['moveRandom'],
+                [True])
 
-        if action[0] == '' and action[1] is True:
-            self.r_goal[0] += random.choice(r)
-            self.r_goal[1] += random.choice(r)
-            action = self.skip()
-            # action = self.nav_to((self.r_goal[0], self.r_goal[1]),
-            # agent_id, new_obs)
+    def zigzag_direction(self, direction, dimension, path_length):
+        """
+        Return correct nav_to intention based on direction and dimension
+        in which the agent will move.
+        """
+        location = self.beliefs.get_current(self._user_id).location
+        if dimension == 'height':
+            if direction == 'north':
+                goal = (location[0], location[1] - 11)
+                descriptions = 'moveNorth'
+            elif direction == 'east':
+                goal = (location[0] + path_length, location[1])
+                descriptions = 'moveEast'
+            elif direction == 'south':
+                goal = (location[0], location[1] + 11)
+                descriptions = 'moveSouth'
+            elif direction == 'west':
+                goal = (location[0] - path_length, location[1])
+                descriptions = 'moveWest'
 
-        return action
+        elif dimension == 'width':
+            if direction == 'north':
+                goal = (location[0], location[1] - path_length)
+                descriptions = 'moveNorth'
+            elif direction == 'east':
+                goal = (location[0] + 11, location[1])
+                descriptions = 'moveEast'
+            elif direction == 'south':
+                goal = (location[0], location[1] + path_length)
+                descriptions = 'moveSouth'
+            elif direction == 'west':
+                goal = (location[0] - 11, location[1])
+                descriptions = 'moveWest'
+
+        return ([self.nav_to],
+                [(goal, self._user_id)],
+                [tuple()],
+                [descriptions],
+                [True])
+
+    def zigzag_move(self, path_length=5, direction='east'):
+        """
+        Move is a zigzag pattern to explore the environment most efficiently.
+
+        Arguments
+        ---------
+        path_length: int
+            The number of steps the agent walks vertically before moving
+            11 steps horizontally (because the local vision reaches 5 cells).
+        direction: str
+            A direction perpendicular to the path,
+            which is defined by path length.
+        """
+        intentions = [self.zigzag_direction, self.zigzag_direction,
+                      self.zigzag_direction, self.zigzag_direction]
+        contexts = [tuple(), tuple(), tuple(), tuple()]
+        primitives = [False, False, False, False]
+
+        if direction in ['east', 'west']:
+            args = [('south', 'width', path_length),
+                    (direction, 'width', path_length),
+                    ('north', 'width', path_length),
+                    (direction, 'width', path_length)]
+            descriptions = ['moveSouth', f'move{direction.capitalize()}',
+                            'moveNorth', f'move{direction.capitalize()}']
+
+        elif direction in ['north', 'south']:
+            args = [('east', 'height', path_length),
+                    (direction, 'height', path_length),
+                    ('west', 'height', path_length),
+                    (direction, 'height', path_length)]
+            descriptions = ['moveEast', f'move{direction.capitalize()}',
+                            'moveWest', f'move{direction.capitalize()}']
+
+        return intentions, args, contexts, descriptions, primitives
 
     def single_agent_zig_zag(self, agent_id, path_length=15):
         """
@@ -98,7 +137,7 @@ class Mapper(Agent):
                 self.z_goal = list(self.graph.get_current().location)
                 self.prev_zigzag = self.zigzag
                 self.zigzag = self.options[2]
-                print(f'{self._user}: Changing direction to {self.zigzag}')
+                self.pretty_print(f'changing direction to {self.zigzag}')
 
         if self.zigzag == 'north':
             action = self.nav_to((self.z_goal[0], self.z_goal[1]-path_length),
@@ -107,7 +146,7 @@ class Mapper(Agent):
                 self.z_goal = list(self.graph.get_current().location)
                 self.prev_zigzag = self.zigzag
                 self.zigzag = self.options[2]
-                print(f'{self._user}: Changing direction to {self.zigzag}')
+                self.pretty_print(f'changing direction to {self.zigzag}')
 
         if self.zigzag == self.options[2]:
             if self.options[2] == 'east':
@@ -124,7 +163,7 @@ class Mapper(Agent):
                 else:
                     self.prev_zigzag = self.zigzag
                     self.zigzag = 'north'
-                print(f'{self._user}: Changing direction to {self.zigzag}')
+                self.pretty_print(f'changing direction to {self.zigzag}')
 
         return action
 
@@ -133,19 +172,6 @@ class Mapper(Agent):
         This is part of my actual thesis.
         """
         pass
-
-    def agent_broadcast(self, agent_location):
-        """
-        Communicate with the other agents to establish a connection for multi
-        agent exploration.
-        Return agent's id if found, otherwise return False
-
-        Arguments
-        ---------
-        agent_location: (int, int)
-            The location of the other agent your trying to connect to.
-        """
-        return False
 
     def multi_agent_explore(self, agent_id, teammate):
         """

@@ -1,8 +1,10 @@
 if __name__ == "__main__":
     from helpers.agent import Agent
     from helpers.BDIAgent import BDIAgent
+
 else:
     from .helpers import Agent
+    from .helpers import BDIAgent
 
 
 class Tester(Agent, BDIAgent):
@@ -13,13 +15,13 @@ class Tester(Agent, BDIAgent):
 
     def run(self):
         while True:
-            print(self.intention_queue)
             msg = self.receive_msg()
             if msg:
                 if msg["type"] == "request-action":
                     if msg['content']['percept']['lastActionResult'] == \
                             'failed_random':
-                        self.add_last_action()
+                        self.add_last_intention()
+
                     self.beliefs.update(msg, self._user_id)
                     intention_addition = self.get_intention()
                     self.add_intention(*intention_addition)
@@ -38,20 +40,32 @@ class Tester(Agent, BDIAgent):
         """
         Prevents enemy from moving towards goal
         """
+        intentions = [self.nav_to, self.test2]
+        args = [((1, 1), self._user_id), tuple()]
+        contexts = [tuple(), tuple()]
+        descriptions = ["RetrievingBlock", "NonPrimitive"]
+        primitive = [True, False]
 
-        # TODO: Detect what goal state builder is moving towards
-        # perhaps in connection with the spy
+        return intentions, args, contexts, descriptions, primitive
 
-        # TODO: Detect if blocking is possible somehow
+    def test2(self):
+        intentions = [self.test3, self.nav_to]
+        args = [tuple(), ((2, 2), self._user_id)]
+        contexts = [tuple(), tuple()]
+        descriptions = ["NonPrimitive", "Primitive"]
+        primitive = [False, True]
 
-        # TODO: Stand in between builder and goal state
-        # return self.nav_to, ((1, 2),), tuple(), "preventMoving"
+        return intentions, args, contexts, descriptions, primitive
+
+    def test3(self):
         intentions = [self.nav_to]
-        args = [((1, 2), self._user_id)]
+        args = [((3, 3), self._user_id)]
         contexts = [tuple()]
-        descriptions = ["RetrievingBlock"]
+        descriptions = ["Primitive"]
+        primitive = [True]
 
-        return intentions, args, contexts, descriptions
+        return intentions, args, contexts, descriptions, primitive
+
 
 if __name__ == "__main__":
     a_list = []
