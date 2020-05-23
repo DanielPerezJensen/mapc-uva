@@ -735,6 +735,49 @@ class Graph(object):
 
         print(print_res)
 
+    def print_local(self, agent_id):
+        curr_x, curr_y = self.get_current(agent_id).location
+
+        print_res = ''
+
+        for y in range(curr_y - 5, curr_y + 6):
+            
+            for x in range(curr_x - 5, curr_x + 6):
+                if (x,y) == (curr_x, curr_y):
+                        print_res += f"{'A' + str(agent_id):<3}"
+                elif (x, y) == (0, 0):
+                    print_res += f"{'O':<3}"
+                elif (x, y) in self.nodes:
+                    things = self.nodes[(x, y)].get_things(step=self.step)
+                    terrain = self.nodes[(x, y)].get_terrain()
+                    
+                    print_tmp = ''
+                    for (thing, detail) in things:
+                        if thing == 'entity' and (x, y) != (curr_x, curr_y):
+                            print_tmp = f"{'A?':<3}"
+                        elif thing == 'block' and not print_tmp:
+                            print_tmp = f"{detail:<3}"
+                        elif thing == 'dispenser' and not print_tmp:
+                            print_tmp = f"{'d' + detail[1]:<3}"
+                        elif thing == 'marker' and not print_tmp:
+                            print_tmp = f"{'M':<3}"
+                        elif thing == 'taskboard' and not print_tmp:
+                            print_tmp = f"{'T':<3}"
+                    print_res += print_tmp
+
+                    if not print_tmp:
+                        if terrain == 'empty':
+                            print_res += f"{'.':<3}"
+                        elif terrain == 'obstacle':
+                            print_res += f"{'#':<3}"
+                        elif terrain == 'goal':
+                            print_res += f"{'G':<3}"
+                else:
+                    print_res += f"{'':<3}"
+            print_res += '\n'
+
+        print(print_res)
+
 
 def agent_moved(msg):
     """
