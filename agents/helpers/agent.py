@@ -380,11 +380,16 @@ class DStarLite(object):
             x and y coordinate of second node
         """
 
+        curr_loc = self.beliefs.get_current(self.agent_id).location
+
+        attached_locs = [(curr_loc[0] + att[0], curr_loc[1] + att[1]) for att
+                         in self.beliefs.attached]
+
         for node in [from_node, to_node]:
             if node in self.beliefs.nodes and \
-                self.beliefs.nodes[node]._is_thing(self.beliefs.step,
-                                                   self.beliefs.get_current(
-                                                    self.agent_id).location):
+                    self.beliefs.nodes[node]._is_thing(self.beliefs.step,
+                                                       curr_loc,
+                                                       attached_locs):
                 return float('inf')
 
         if len(self.beliefs.attached):
@@ -415,7 +420,9 @@ class DStarLite(object):
 
     def lowest_cost_neighbour(self, node):
         cost = partial(self.lookahead_cost, node)
-        return min(self.neighbors(node), key=cost)
+        neighbors = self.neighbors(node)
+        min_cost = min(neighbors, key=cost)
+        return min_cost
 
     def g(self, node):
         return self.G_VALS.get(node, float('inf'))
@@ -502,22 +509,17 @@ class DStarLite(object):
         new_obs = [obs for sublist in beliefs.new_obs.values()
                    for obs in sublist]
 
-        # if self.beliefs.attached:
-        #     for x in range(self.position[0] - 1, self.position[0] + 2):
-        #         for y in range(self.position[1] - 1, self.position[1] + 2):
-        #             print(self.beliefs.exp_nodes[(x, y)])
-
         # Update the path if there are new observations
         if new_obs:
             self.Km += self.heuristic(self.last_node, self.position)
-
-            self.update_nodes({node for wallnode in new_obs
-                              for node in self.neighbors(wallnode)
+            attached_locs = [(self.position[0] + att[0], self.position[1] +
+                             att[1]) for att in self.beliefs.attached]
+            self.update_nodes({node for obs in new_obs
+                              for node in self.neighbors(obs)
                               if (node not in self.beliefs.nodes or not
                                   self.beliefs.nodes[node]._is_thing(
-                                      self.beliefs.step,
-                                      self.beliefs.get_current(self.agent_id).
-                                      location))})
+                                      self.beliefs.step, self.position,
+                                      attached_locs))})
 
             self.compute_shortest_path()
 

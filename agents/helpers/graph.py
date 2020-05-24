@@ -242,7 +242,8 @@ class Node(object):
             return True
         return False
 
-    def _is_thing(self, step, agent_location, things=['block', 'entity']):
+    def _is_thing(self, step, agent_location, attached,
+                  things=['block', 'entity']):
         """
         Determine if a node is a given thing.
         By default looking for blocks and entities.
@@ -252,6 +253,8 @@ class Node(object):
             Current game step.
         agent_location: (int, int)
             The location of the agent itself.
+        attached: list of tuples
+            The location of the blocks attached to the agent.
         things: list of str
             List of things to include from {block, entity, dispenser, marker}.
         """
@@ -259,57 +262,15 @@ class Node(object):
         if agent_location == self.location:
             return False
 
-        # check for entities
+        if self.location in attached:
+            return False
+
+        # check for things
         loc_things = self.get_things(step)
         for thing in loc_things:
             if thing[0] in things:
                 return True
         return False
-
-
-# class ExpNode(object):
-#     def __init__(self, location, terrain='empty', things={},
-#                  surr_obstacles=0):
-#         """
-#         Initialise the node and create attribute with default values.
-#         Terrain and step get combined into a tuple for easier use
-
-#         Arguments
-#         ---------
-#         location: tuple(int, int)
-#             A tuple containing the x, y coordinate of the node relative to the
-#             graph's initial node.
-#         terrain: str
-#             The type of terrain (empty, obstacle, goal).
-#         things: {step:thing}
-#             A dictionary containing a list of things (value) in the node
-#             (entities, blocks, dispensers, markers) on a certain step (key).
-#         """
-#         self.location = location
-#         self.terrain = terrain
-#         self.surr_obstacles = surr_obstacles
-#         # if things == {}:
-#         #     self.things = {}
-#         # else:
-#         #     self.things = things
-
-#     def set_terrain(self, terrain):
-#         self.terrain = terrain
-
-#     def _is_obstacle(self):
-#         """
-#         Determine if a node is an obstacle block.
-#         Parameters
-#         ---------
-#         step: int
-#             Current game step.
-#         agent_location: (int, int)
-#             The location of the agent itself.
-#         """
-#         # check for obstacles
-#         if self.terrain == 'obstacle' or self.surr_obstacles:
-#             return True
-#         return False
 
 
 class Graph(object):
