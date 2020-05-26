@@ -195,10 +195,14 @@ class Node(object):
                     return (x+1, y)
 
         else:
-            return [self.get_direction(width=width, height=height, direction='n'),
-                    self.get_direction(width=width, height=height, direction='e'),
-                    self.get_direction(width=width, height=height, direction='s'),
-                    self.get_direction(width=width, height=height, direction='w')]
+            return [self.get_direction(width=width, height=height,
+                                       direction='n'),
+                    self.get_direction(width=width, height=height,
+                                       direction='e'),
+                    self.get_direction(width=width, height=height,
+                                       direction='s'),
+                    self.get_direction(width=width, height=height,
+                                       direction='w')]
 
     def add_direction(self, north=None, east=None, south=None, west=None):
         """
@@ -279,7 +283,8 @@ class Graph(object):
         for x in range(-5, 6):
             for y in range(-5, 6):
                 if abs(x) + abs(y) < 6:
-                    self.nodes[self.modulate((x, y))] = Node(self.modulate((x, y)))
+                    self.nodes[self.modulate((x, y))] = \
+                        Node(self.modulate((x, y)))
 
         self.current = {agent_id: self.nodes[(0, 0)]}
         self.things = {'goals': [], 'dispensers': {}, 'taskboards': []}
@@ -373,7 +378,8 @@ class Graph(object):
         if agent_moved(msg):
             prev_direction = msg['content']['percept']['lastActionParams'][0]
             # Failsafe incase new node doesn't exist.
-            self.current[agent_id] = self.current[agent_id].directions[prev_direction]
+            self.current[agent_id] = \
+                self.current[agent_id].directions[prev_direction]
 
     def update_step(self, step):
         """
@@ -388,19 +394,23 @@ class Graph(object):
         that direction.
         """
         x, y = node.location
-        if self.modulate((x, y-1)) in self.nodes and node.directions['n'] is None:
+        if self.modulate((x, y-1)) in self.nodes and \
+                node.directions['n'] is None:
             node.add_direction(north=self.nodes[self.modulate((x, y-1))])
             self.nodes[self.modulate((x, y-1))].add_direction(south=node)
 
-        if self.modulate((x+1, y)) in self.nodes and node.directions['e'] is None:
+        if self.modulate((x+1, y)) in self.nodes and \
+                node.directions['e'] is None:
             node.add_direction(east=self.nodes[self.modulate((x+1, y))])
             self.nodes[self.modulate((x+1, y))].add_direction(west=node)
 
-        if self.modulate((x, y+1)) in self.nodes and node.directions['s'] is None:
+        if self.modulate((x, y+1)) in self.nodes and \
+                node.directions['s'] is None:
             node.add_direction(south=self.nodes[self.modulate((x, y+1))])
             self.nodes[self.modulate((x, y+1))].add_direction(north=node)
 
-        if self.modulate((x-1, y)) in self.nodes and node.directions['w'] is None:
+        if self.modulate((x-1, y)) in self.nodes and \
+                node.directions['w'] is None:
             node.add_direction(west=self.nodes[self.modulate((x-1, y))])
             self.nodes[self.modulate((x-1, y))].add_direction(east=node)
 
@@ -447,9 +457,12 @@ class Graph(object):
                     self.things['taskboards'].append((new_x, new_y))
             elif thing['type'] == 'dispensers':
                 if thing['details'] not in self.things['dispensers']:
-                    self.things['dispensers'][thing['details']] = [(new_x, new_y)]
-                elif (new_x, new_y) not in self.things['dispensers'][thing['details']]:
-                    self.things['dispensers'][thing['details']].append((new_x, new_y))
+                    self.things['dispensers'][thing['details']] = \
+                        [(new_x, new_y)]
+                elif (new_x, new_y) not \
+                        in self.things['dispensers'][thing['details']]:
+                    self.things['dispensers'][thing['details']].append(
+                        (new_x, new_y))
 
             if (new_x, new_y) in vision:
                 vision[(new_x, new_y)]['things'].append((thing['type'],
@@ -512,9 +525,9 @@ class Graph(object):
 
     def get_local_nodes(self, agent_id, offset=None):
         """
-        Return the location of the nodes around within the agent's local vision.
-        By default the coordinates are create with respect to the agent's
-        current location. This can be changed by changing the offset.
+        Return the location of the nodes around within the agent's local
+        vision. By default the coordinates are create with respect to the
+        agent's current location. This can be changed by changing the offset.
         Returns a list of tuple coordinates.
 
         Arguments
@@ -557,8 +570,8 @@ class Graph(object):
 
     def get_local_things(self, agent_id):
         """
-        Return the location and things of the nodes in the agent's local vision.
-        The returned item is a list of tuples. The tuples contain the
+        Return the location and things of the nodes in the agent's local
+        vision. The returned item is a list of tuples. The tuples contain the
         coordinates of the thing relative to the agent and the things
         themselves, respectively.
         """
@@ -566,7 +579,8 @@ class Graph(object):
         cx, cy = self.get_current(agent_id).location
         for node in self.get_local_nodes(agent_id, offset=(0, 0)):
             real_node = self.modulate((node[0] + cx, node[1] + cy))
-            local_things.append((node, self.nodes[real_node].get_things(step=self.step)))
+            local_things.append(
+                (node, self.nodes[real_node].get_things(step=self.step)))
         return local_things
 
     def get_new_nodes(self, msg, agent_id):
@@ -669,24 +683,91 @@ class Graph(object):
                 if node != self.modulate(node):
                     if self.nodes[node].get_terrain()[1] > \
                             self.nodes[self.modulate(node)].get_terrain()[1]:
-                        self.nodes[self.modulate(node)].set_terrain(self.nodes[node].get_terrain()[0],
-                                                                    self.nodes[node].get_terrain()[1])
+                        self.nodes[self.modulate(node)].set_terrain(
+                            self.nodes[node].get_terrain()[0],
+                            self.nodes[node].get_terrain()[1])
 
                     for things in self.nodes[node].get_things():
-                        self.nodes[self.modulate(node)].add_things(things[0], things[1])
+                        self.nodes[self.modulate(node)].add_things(things[0],
+                                                                   things[1])
             else:
-                self.nodes[self.modulate(node)] = Node(self.modulate(node),
-                                                       terrain=self.nodes[node].get_terrain()[0],
-                                                       step=self.nodes[node].get_terrain()[1])
+                self.nodes[self.modulate(node)] = \
+                    Node(self.modulate(node),
+                         terrain=self.nodes[node].get_terrain()[0],
+                         step=self.nodes[node].get_terrain()[1])
 
                 for things in self.nodes[node].get_things():
-                    self.nodes[self.modulate(node)].add_things(things[0], things[1])
+                    self.nodes[self.modulate(node)].add_things(things[0],
+                                                               things[1])
 
         for agent, node in self.current.items():
-            self.current[agent] = self.nodes[self.modulate(node.get_location())]
+            self.current[agent] = \
+                self.nodes[self.modulate(node.get_location())]
 
         for node in self.nodes:
             self.add_neighbours(self.nodes[node])
+
+    def print_local(self, agent_id, all=False):
+        """
+        Print the map as represented by the beliefs.
+
+        arguments
+        ----------
+        all: bool
+            If True, prints the entire known map.
+            If False, prints a 10 by 10 area.
+        """
+        curr_x, curr_y = self.get_current(agent_id).location
+
+        if all:
+            min_x = min(self.nodes.keys(), key=lambda x: x[0])[0]
+            max_x = max(self.nodes.keys(), key=lambda x: x[0])[0]
+            min_y = min(self.nodes.keys(), key=lambda x: x[1])[1]
+            max_y = max(self.nodes.keys(), key=lambda x: x[1])[1]
+        else:
+            min_x = curr_x - 5
+            max_x = curr_x + 5
+            min_y = curr_y - 5
+            max_y = curr_y + 5
+
+        print_res = ''
+
+        for y in range(min_y, max_y + 1):
+            for x in range(min_x, max_x + 1):
+                if (x, y) == (curr_x, curr_y):
+                    print_res += f"{'A' + str(agent_id):<3}"
+                elif (x, y) == (0, 0):
+                    print_res += f"{'O':<3}"
+                elif (x, y) in self.nodes:
+                    things = self.nodes[(x, y)].get_things(step=self.step)
+                    terrain = self.nodes[(x, y)].get_terrain()[0]
+
+                    print_tmp = ''
+                    for (thing, detail) in things:
+                        if thing == 'entity' and (x, y) != (curr_x, curr_y):
+                            print_tmp = f"{'A?':<3}"
+                        elif thing == 'block' and not print_tmp:
+                            print_tmp = f"{detail:<3}"
+                        elif thing == 'dispenser' and not print_tmp:
+                            print_tmp = f"{'d' + detail[1]:<3}"
+                        elif thing == 'marker' and not print_tmp:
+                            print_tmp = f"{'M':<3}"
+                        elif thing == 'taskboard' and not print_tmp:
+                            print_tmp = f"{'T':<3}"
+                    print_res += print_tmp
+
+                    if not print_tmp:
+                        if terrain == 'empty':
+                            print_res += f"{'.':<3}"
+                        elif terrain == 'obstacle':
+                            print_res += f"{'#':<3}"
+                        elif terrain == 'goal':
+                            print_res += f"{'G':<3}"
+                else:
+                    print_res += f"{'':<3}"
+            print_res += '\n'
+
+        print(print_res)
 
 
 def agent_moved(msg):
@@ -701,8 +782,8 @@ def agent_moved(msg):
 
 def merge_graphs(g1, agent1, g2, agent2, offset):
     """
-    Merge two graphs. The second graph (g2) will adopt the coordinate system from
-    the first graph (g1).
+    Merge two graphs. The second graph (g2) will adopt the coordinate system
+    from the first graph (g1).
 
     Arguments
     ---------
@@ -735,14 +816,18 @@ def merge_graphs(g1, agent1, g2, agent2, offset):
             g1.nodes[(new_x, new_y)].set_location((new_x, new_y))
 
             if (x, y-1) in g1.nodes:
-                g1.nodes[(new_x, new_y)].add_direction(north=g1.nodes[(x, y-1)])
-                g1.nodes[(x, y-1)].add_direction(south=g1.nodes[(new_x, new_y)])
+                g1.nodes[(new_x, new_y)].add_direction(
+                    north=g1.nodes[(x, y-1)])
+                g1.nodes[(x, y-1)].add_direction(
+                    south=g1.nodes[(new_x, new_y)])
             if (x+1, y) in g1.nodes:
                 g1.nodes[(new_x, new_y)].add_direction(east=g1.nodes[(x+1, y)])
                 g1.nodes[(x+1, y)].add_direction(west=g1.nodes[(new_x, new_y)])
             if (x, y+1) in g1.nodes:
-                g1.nodes[(new_x, new_y)].add_direction(south=g1.nodes[(x, y+1)])
-                g1.nodes[(x, y+1)].add_direction(north=g1.nodes[(new_x, new_y)])
+                g1.nodes[(new_x, new_y)].add_direction(
+                    south=g1.nodes[(x, y+1)])
+                g1.nodes[(x, y+1)].add_direction(
+                    north=g1.nodes[(new_x, new_y)])
             if (x-1, y) in g1.nodes:
                 g1.nodes[(new_x, new_y)].add_direction(west=g1.nodes[(x-1, y)])
                 g1.nodes[(x-1, y)].add_direction(east=g1.nodes[(new_x, new_y)])
