@@ -343,31 +343,6 @@ class DStarLite(object):
         # Create initial path to goal
         self.compute_shortest_path()
 
-    def old_transition_cost(self, from_node, to_node):
-        """
-        Returns the cost of the node transition.
-
-        parameters
-        ----------
-        from_node: tuple
-            x and y coordinate of first node
-        to_node: tuple
-            x and y coordinate of second node
-        """
-
-        for node in [from_node, to_node]:
-            if node in self.beliefs.nodes and \
-                self.beliefs.nodes[node]._is_thing(self.beliefs.step,
-                                                   self.beliefs.get_current(
-                                                    self.agent_id).location):
-                return float('inf')
-
-        if to_node in self.beliefs.nodes and \
-                self.beliefs.nodes[to_node]._is_obstacle():
-            return self.obstacle_cost
-
-        return 1
-
     def transition_cost(self, from_node, to_node):
         """
         Returns the cost of the node transition.
