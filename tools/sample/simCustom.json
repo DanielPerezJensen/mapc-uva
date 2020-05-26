@@ -3,8 +3,7 @@
     "randomSeed" : 17,
     "randomFail" : 1,
     "entities" : {"standard" : 2},
-    "clusterSize" : 1,
-  
+    "clusterBounds" : [1, 1],
     "clearSteps" : 3,
     "clearEnergyCost" : 30,
     "disableDuration" : 4,

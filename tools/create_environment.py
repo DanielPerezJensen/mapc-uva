@@ -10,18 +10,17 @@ import os
 def main():
     """
     'g' is a goal location
-   '#' is an obstacle
-   '{team}{digit}' refers to agent{team}{digit}, where team must be uppercase.
-   'b{digit}' refers to a block of type {digit}.
-       If an exclamation mark is in front of  the digit (e.g. '!b{digit}'),
-       the block is attatched to an adjascent agent/block.
-   'd{digit}' refers to a dispenser of type {digit}.
+    '#' is an obstacle
+    '{team}{digit}' refers to agent{team}{digit}, where team must be uppercase.
+    'b{digit}' refers to a block of type {digit}.
+        If an exclamation mark is in front of  the digit (e.g. '!b{digit}'),
+        the block is attatched to an adjascent agent/block.
+    'd{digit}' refers to a dispenser of type {digit}.
+    't' refers to a taskboard.
     A task can be created in the dictionary as follows:
-    {'task_name': (duration, [(x1, y1, block), (x2, y2, block)])}
-    Where the coordinates are relative to the agent.
+        {'task_name': (duration, [(x1, y1, block), (x2, y2, block)])}
+        Where the coordinates are relative to the agent.
 
-    Taskboards refers to the number of taskboards in the game, these can only
-    be generated at a random location.
     Steps refers to the amount of steps for the simulation.
     If fast_mode is set to false, extra agents are moved outside the map,
     this ensures that the game will not skip through the steps.
@@ -42,10 +41,9 @@ def main():
 
     # TODO: Add tasks and steps into customMap.txt and parse it nicely
     # tasks = {'task1': (100, [(1, 0, 'b0')]), 'task2': (150, [(0, 1, 'b1')])}
-    tasks = {'task2': (150, [(0, 1, 'b1')])}
+    tasks = {'complexTask1': (150, [(0, 1, 'b0'), (-1, 1, 'b0')])}
     steps = 300
     fast_mode = True
-    taskboards = 1
     #########################
 
     # get path to config, request it if it does not yet exist
@@ -77,14 +75,14 @@ def main():
         n_agents = len(config["agent_ids"]) + 1
         sample_sim["entities"]["standard"] = n_agents
         for i, team in enumerate(config['teams']):
-            setup_file.write(f"move {i} {len(mapping)} agent{team}{n_agents}")
+            setup_file.write(
+                f"move {i} {len(mapping) + 4} agent{team}{n_agents}")
 
     sample_sim["grid"]["height"] = len(mapping)
     sample_sim["grid"]["width"] = len(mapping[0])
     sample_sim["blockTypes"] = 2 * [len(config['blocks'])]
     sample_sim["setup"] = 'conf/' + setup_name
     sample_sim["steps"] = steps
-    sample_sim["tasks"]["taskboards"] = taskboards
 
     # write results
     with open(path_to_config + config_name, "w") as f:
@@ -125,6 +123,9 @@ def create_setup_file(mapping, tasks, output_file):
             elif element == 'g':
                 # create goal location
                 queue.append(f"terrain {i} {j} goal\n")
+            elif element == 't':
+                # create taskboard
+                queue.append(f"add {i} {j} taskboard\n")
             elif element[0] == 'd':
                 # add to config
                 if element[1:] not in config['blocks']:
