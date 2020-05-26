@@ -361,16 +361,30 @@ class Graph(object):
         vision = self.get_vision(msg, agent_id)
         for node in self.get_local_nodes(agent_id):
             if self.nodes[node].get_terrain()[0] == 'obstacle':
+                # check for new empty spots
                 if node not in vision or vision[node]['terrain'] == 'empty':
                     self.nodes[node].set_terrain('empty', step)
                     new_empty.append(node)
                     self.update_surroundings(node, step, operation='decrease')
 
             if node in vision:
+                # check for new obstacles
                 if self.nodes[node].get_terrain()[0] == 'empty' and \
                         vision[node]['terrain'] == 'obstacle':
                     new_obstacles.append(node)
                     self.update_surroundings(node, step)
+
+                # check for new goals
+                if self.nodes[node].get_terrain()[0] != 'goal' and \
+                        vision[node]['terrain'] == 'goal':
+                    self.things['goals'].append(node)
+
+                known_things = self.nodes[node].get_things(step)
+
+                for seen_thing in vision[node]['things']:
+                    if seen_thing[0] in ['dispenser', 'taskboard'] and \
+                            seen_thing not in known_things:
+                        self.add_thing(seen_thing, node)
 
                 self.nodes[node].set_terrain(vision[node]['terrain'], step)
                 self.nodes[node].add_things(vision[node]['things'], step)
@@ -381,6 +395,26 @@ class Graph(object):
         self.attached = [tuple(x) for x in
                          msg["content"]["percept"]["attached"]]
         self.energy = msg["content"]["percept"]["energy"]
+
+    def add_thing(self, thing, location):
+        """
+        Adds given thing to self.things.
+
+        parameters
+        -----------
+        thing: tuple
+            (type, details) of the thing
+        location: tuple
+            the location of the thing
+        """
+
+        if thing[0] == 'dispenser':
+            if thing[1] in self.things['dispensers']:
+                self.things['dispensers'][thing[1]].append(location)
+            else:
+                self.things['dispensers'][thing[1]] = [location]
+        else:
+            self.things[thing[0] + 's'].append(location)
 
     def update_surroundings(self, node, step, operation='increase'):
         # print("updating node:", node)
@@ -469,13 +503,9 @@ class Graph(object):
         things = msg['content']['percept']['things']
         cx, cy = self.get_current(agent_id).location
 
-        for option in terrain:
-            for x, y in terrain[option]:
+        for option, locations in terrain.items():
+            for x, y in locations:
                 new_x, new_y = x + cx, y + cy
-
-                if option == "goal":
-                    if (new_x, new_y) not in self.things['goals']:
-                        self.things['goals'].append((new_x, new_y))
 
                 if (new_x, new_y) in vision:
                     vision[(new_x, new_y)]['terrain'] = option
@@ -484,18 +514,6 @@ class Graph(object):
 
         for thing in things:
             new_x, new_y = thing['x'] + cx, thing['y'] + cy
-
-            if thing['type'] == 'taskboard':
-                if (new_x, new_y) not in self.things['taskboards']:
-                    self.things['taskboards'].append((new_x, new_y))
-            elif thing['type'] == 'dispensers':
-                if thing['details'] not in self.things['dispensers']:
-                    self.things['dispensers'][thing['details']] = \
-                        [(new_x, new_y)]
-                elif (new_x, new_y) not \
-                        in self.things['dispensers'][thing['details']]:
-                    self.things['dispensers'][thing['details']].append(
-                        (new_x, new_y))
 
             if (new_x, new_y) in vision:
                 vision[(new_x, new_y)]['things'].append((thing['type'],
