@@ -28,6 +28,7 @@ class Node(object):
             The node to the corresponding direction of this node.
         """
         self.location = location
+        self.surr_obstacles = 0
         self.terrain = (terrain, step)
         if things == {}:
             self.things = {}
@@ -204,6 +205,7 @@ class Node(object):
                     self.get_direction(width=width, height=height,
                                        direction='w')]
 
+
     def add_direction(self, north=None, east=None, south=None, west=None):
         """
         Add a node to the current node in a given direction.
@@ -234,10 +236,15 @@ class Node(object):
         # check for obstacles
         if self.terrain[0] == 'obstacle':
             return True
-
         return False
 
-    def _is_thing(self, step, agent_location, things=['block', 'entity']):
+    def _is_exp_obstacle(self):
+        if self.terrain[0] == 'obstacle' or self.surr_obstacles:
+            return True
+        return False
+
+    def _is_thing(self, step, agent_location, attached,
+                  things=['block', 'entity']):
         """
         Determine if a node is a given thing.
         By default looking for blocks and entities.
@@ -247,6 +254,8 @@ class Node(object):
             Current game step.
         agent_location: (int, int)
             The location of the agent itself.
+        attached: list of tuples
+            The location of the blocks attached to the agent.
         things: list of str
             List of things to include from {block, entity, dispenser, marker}.
         """
@@ -254,7 +263,10 @@ class Node(object):
         if agent_location == self.location:
             return False
 
-        # check for entities
+        if self.location in attached:
+            return False
+
+        # check for things
         loc_things = self.get_things(step)
         for thing in loc_things:
             if thing[0] in things:
@@ -291,6 +303,7 @@ class Graph(object):
         self.tasks = {}
         self.new_obs = {'obstacles': [], 'empty': [], 'agents': []}
         self.attached = []
+        self.energy = 300
 
         for node in self.nodes.values():
             x, y = node.location
@@ -351,11 +364,13 @@ class Graph(object):
                 if node not in vision or vision[node]['terrain'] == 'empty':
                     self.nodes[node].set_terrain('empty', step)
                     new_empty.append(node)
+                    self.update_surroundings(node, step, operation='decrease')
 
             if node in vision:
                 if self.nodes[node].get_terrain()[0] == 'empty' and \
                         vision[node]['terrain'] == 'obstacle':
                     new_obstacles.append(node)
+                    self.update_surroundings(node, step)
 
                 self.nodes[node].set_terrain(vision[node]['terrain'], step)
                 self.nodes[node].add_things(vision[node]['things'], step)
@@ -365,6 +380,24 @@ class Graph(object):
         self.tasks = msg["content"]["percept"]["tasks"]
         self.attached = [tuple(x) for x in
                          msg["content"]["percept"]["attached"]]
+        self.energy = msg["content"]["percept"]["energy"]
+
+    def update_surroundings(self, node, step, operation='increase'):
+        # print("updating node:", node)
+        if operation == 'increase':
+            add = 1
+        else:
+            add = -1
+
+        for x in range(node[0] - 1, node[0] + 2):
+            for y in range(node[1] - 1, node[1] + 2):
+                loc = self.modulate((x, y))
+                if loc != node:
+                    if loc in self.nodes:
+                        self.nodes[loc].surr_obstacles += add
+                    else:
+                        self.nodes[loc] = Node(loc, step=step)
+                        self.nodes[loc].surr_obstacles += add
 
     def update_current(self, msg, agent_id):
         """
@@ -768,7 +801,6 @@ class Graph(object):
             print_res += '\n'
 
         print(print_res)
-
 
 def agent_moved(msg):
     """
