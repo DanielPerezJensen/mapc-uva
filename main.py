@@ -15,7 +15,7 @@ def main():
         a_list = []
         input_queue = Queue(maxsize=teamSize)
         output_queue = Queue(maxsize=teamSize)
-        
+
         strategist = Strategist(f"Strategist", [input_queue, output_queue])
         strategist.start()
 
@@ -23,7 +23,7 @@ def main():
             a_list.append(SuperAgent(f"agentA{i}", "1"))
             a_list[-1].start()
 
-            
+
 def get_teamSize():
     """
     Returns the configuration of the server as
