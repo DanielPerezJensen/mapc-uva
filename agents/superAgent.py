@@ -39,11 +39,9 @@ class SuperAgent(*AGENTS, BDIAgent):
             if msg:
                 # Parse the response.
                 if msg["type"] == "request-action":
-
                     # Get the request id
                     request_id = self._get_request_id(msg)
                     agent_id = self._user_id
-
                     # Update beliefs
                     self.beliefs.update(msg, agent_id)
 
@@ -55,14 +53,12 @@ class SuperAgent(*AGENTS, BDIAgent):
                         self.input_queue.join()
 
                         self.input_queue.put(('merge', self))
-                        # self.input_queue.join()
-                        strategist.merged_agents = []
 
                     # TODO: Listen to strategist thread for role
                     # TODO: Set role as chosen by strategist
                     agent_type = AGENTS[3]
 
-                    # Read last action if it randomly failed
+                    # # Read last action if it randomly failed
                     if msg['content']['percept']['lastActionResult'] == \
                             'failed_random' and self.last_intention:
                         if self.last_intention.method.__name__ != "nav_to":
@@ -93,15 +89,6 @@ class SuperAgent(*AGENTS, BDIAgent):
                         self.send_request(
                             self._add_request_id(action, request_id))
                         self.pretty_print("Done with action", request_id)
-
-                    # # Makes the agents walk around randomly
-                    # options = ['single', 'random', 'east']
-                    # action = selected_agent.explore(self, agent_id, options)
-                    # #action = self.skip()
-                    #
-                    # # Send action to server
-                    # self.send_request(self._add_request_id(action[0],
-                    #                                        request_id))
 
                     # Provide timing information
                     if self._timer:

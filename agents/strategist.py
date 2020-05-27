@@ -33,7 +33,6 @@ class Strategist(Server):
         super().__init__(user, print_json)
         self.input_queue = queue[0]
         self.output_queue = queue[1]
-        self.merged_agents = []
         print(f'\033[1;34m{self._user}\033[0;0m running')
 
     def run(self):
@@ -45,6 +44,9 @@ class Strategist(Server):
             task = self.peek_queue()
             if task == 'update':
                 if self.input_queue.full():
+                    print(f'Number of graphs: {self.get_number_graphs()}')
+                    x = self.get_agent(1).beliefs
+                    print(f'Width: {x.width}\nHeight: {x.height}')
                     while not self.input_queue.empty():
                         task, agent = self.input_queue.get()
                         self.input_queue.task_done()
@@ -55,11 +57,8 @@ class Strategist(Server):
 
             elif task == 'merge':
                 task, agent = self.input_queue.get()
-                if agent._user_id not in self.merged_agents:
-                    potential_agents = self.identifying_agents(agent)
-                    self.merge_agent_graphs(agent, potential_agents)
-                    self.merged_agents.extend(list(agent.beliefs.current.
-                                                   keys()))
+                potential_agents = self.identifying_agents(agent)
+                self.merge_agent_graphs(agent, potential_agents)
                 self.input_queue.task_done()
 
     def peek_queue(self):
@@ -143,10 +142,10 @@ class Strategist(Server):
                     agent_node = (node[0]-location[0] + agent_current_node[0],
                                   node[1]-location[1] + agent_current_node[1])
 
-                    if not compare_nodes(main_agent.beliefs.
-                                         nodes[main_agent_node],
-                                         agent.beliefs.nodes[agent_node],
-                                         main_agent.beliefs.get_step()):
+                    if not self._compare_nodes(main_agent.beliefs.
+                                               nodes[main_agent_node],
+                                               agent.beliefs.nodes[agent_node],
+                                               main_agent.beliefs.get_step()):
                         new_list.remove(agent)
                         break
 
@@ -189,11 +188,48 @@ class Strategist(Server):
                             self.get_agent(agent).beliefs = new_graph
 
                 else:
-                    """
-                    Determine width or heigth when main_agent.location
-                    + location != agent.location
-                    """
-                    pass
+                    self.calculate_dimensions(main_agent, agent, location)
+
+    def calculate_dimensions(self, main_agent, agent, location):
+        location = list(location)
+        main_location = main_agent.beliefs.\
+            get_current(main_agent._user_id).location
+        agent_location = agent.beliefs.\
+            get_current(agent._user_id).location
+
+        if main_location[0] + location[0] != agent_location[0]:
+            if main_location[0] <= 0:
+                location[0] = -location[0]
+
+            width = abs(main_location[0]) + location[0] + \
+                abs(agent_location[0])
+
+            if not main_agent.beliefs.width or \
+                    main_agent.beliefs.width/width == \
+                    round(main_agent.beliefs.width/width):
+                self.apply_dimensions(width=width)
+
+        if main_location[1] + location[1] != agent_location[1]:
+            if main_location[1] <= 0:
+                location[1] = -location[1]
+
+            height = abs(main_location[1]) + location[1] + \
+                abs(agent_location[1])
+
+            if not main_agent.beliefs.height or \
+                    main_agent.beliefs.height/height == \
+                    round(main_agent.beliefs.height/height):
+                self.apply_dimensions(height=height)
+
+    def apply_dimensions(self, width=0, height=0):
+        for agent in self.get_agents():
+            if width != 0 and not agent.beliefs.width:
+                print(f'Width of {width} applied')
+                agent.beliefs.width = width
+            if height != 0 and not agent.beliefs.height:
+                print(f'Height of {height} applied')
+                agent.beliefs.height = height
+            agent.beliefs.apply_dimensions_to_graph()
 
     def get_number_graphs(self):
         """
@@ -242,24 +278,24 @@ class Strategist(Server):
                 return agent[0]
         return False
 
+    @staticmethod
+    def _compare_nodes(node_1, node_2, step):
+        """
+        Compare two nodes based of their information about the terrain and
+        things.
 
-def compare_nodes(node_1, node_2, step):
-    """
-    Compare two nodes based of their information about the terrain and
-    things.
-
-    Arguments
-    ---------
-    node_1, node_2: Node
-        The nodes in question
-    step: int
-        The current game step (used when comparing things).
-    """
-    if node_1.get_terrain()[0] != node_2.get_terrain()[0]:
-        return False
-    if set(node_1.get_things(step)) != set(node_2.get_things(step)):
-        return False
-    return True
+        Arguments
+        ---------
+        node_1, node_2: Node
+            The nodes in question
+        step: int
+            The current game step (used when comparing things).
+        """
+        if node_1.get_terrain()[0] != node_2.get_terrain()[0]:
+            return False
+        if set(node_1.get_things(step)) != set(node_2.get_things(step)):
+            return False
+        return True
 
 
 if __name__ == "__main__":
