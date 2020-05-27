@@ -36,6 +36,9 @@ class SuperAgent(*AGENTS, BDIAgent):
         while True:
             # Receive a message.
             msg = self.receive_msg()
+
+            time.sleep(0.6)  # uncomment to add delay per step in agent.
+
             if msg:
                 # Parse the response.
                 if msg["type"] == "request-action":

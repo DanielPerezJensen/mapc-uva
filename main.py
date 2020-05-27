@@ -6,6 +6,19 @@ from agents import Strategist
 from queue import Queue
 
 
+def main():
+
+    teamSize = get_teamSize()
+
+    # In case teamSize is returned and not None, start up the agents
+    if teamSize:
+        a_list = []
+
+        for i in range(1, teamSize + 1):
+            a_list.append(SuperAgent(f"agentA{i}", "1"))
+            a_list[-1].start()
+
+
 def get_teamSize():
     """
     Returns the configuration of the server as
@@ -39,7 +52,7 @@ def get_teamSize():
 
     msg = sock.recv(65536).decode().split("\0")[0]
     msg = json.loads(msg)
-    print(msg)
+    # print(msg)
 
     # If message is received, parse it and return it otherwise return None
     if len(msg) > 1:
@@ -58,7 +71,6 @@ def get_teamSize():
 
 
 def main():
-
     teamSize = get_teamSize()
 
     # In case teamSize is returned and not None, start up the agents

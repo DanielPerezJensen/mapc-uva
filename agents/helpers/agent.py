@@ -1,10 +1,11 @@
 from collections import deque
 from functools import partial
 import heapq
+import math
 
 if __name__ == "__main__":
     from server import Server
-    from graph import Graph
+    from graph import graph
 else:
     from .server import Server
     from .graph import Graph
@@ -310,27 +311,28 @@ class Agent(Server):
 
 
 class DStarLite(object):
-    def __init__(self, graph, goal, agent_id):
+    def __init__(self, beliefs, goal, agent_id):
         """
         Find the path to the goal location from the current position
 
         parameters
         ----------
-        graph: object
-            Instance of the current graph
+        beliefs: object
+            Instance of the current beliefs
         goal: tuple
             Goal x and y coordinates
         """
 
-        # Init the graph
-        self.graph = graph
+        # Init the beliefs
+        self.beliefs = beliefs
+        self.obstacle_cost = 32 * math.e ** (-0.008 * self.beliefs.energy)
 
         self.back_pointers = {}
         self.G_VALS = {}
         self.RHS_VALS = {}
         self.Km = 0
         self.agent_id = agent_id
-        self.position = graph.get_current(agent_id).location
+        self.position = beliefs.get_current(agent_id).location
         self.goal = goal
         self.queue = PriorityQueue()
         self.queue.put(self.goal, self.calculate_key(self.goal))
@@ -351,23 +353,26 @@ class DStarLite(object):
             x and y coordinate of second node
         """
 
-        if from_node in self.graph.nodes and \
-                self.graph.nodes[from_node]._is_thing(self.graph.step,
-                                                      self.graph.get_current(
-                                                          self.agent_id).
-                                                      location):
-            return float('inf')
+        curr_loc = self.beliefs.get_current(self.agent_id).location
 
-        if to_node in self.graph.nodes and \
-                self.graph.nodes[to_node]._is_thing(self.graph.step,
-                                                    self.graph.get_current(
-                                                        self.agent_id).
-                                                    location):
-            return float('inf')
+        attached_locs = [(curr_loc[0] + att[0], curr_loc[1] + att[1]) for att
+                         in self.beliefs.attached]
 
-        if to_node in self.graph.nodes and \
-                self.graph.nodes[to_node]._is_obstacle():
-            return 3
+        for node in [from_node, to_node]:
+            if node in self.beliefs.nodes and \
+                    self.beliefs.nodes[node]._is_thing(self.beliefs.step,
+                                                       curr_loc,
+                                                       attached_locs):
+                return float('inf')
+
+        if len(self.beliefs.attached):
+            if to_node in self.beliefs.nodes and \
+                    self.beliefs.nodes[to_node]._is_exp_obstacle():
+                return float('inf')
+        else:
+            if to_node in self.beliefs.nodes and \
+                    self.beliefs.nodes[to_node]._is_obstacle():
+                return 32 * math.e ** (-0.008 * self.beliefs.energy)
 
         return 1
 
@@ -376,7 +381,7 @@ class DStarLite(object):
         results = [(x + 1, y), (x, y - 1), (x - 1, y), (x, y + 1)]
         if (x + y) % 2 == 0:
             results.reverse()  # aesthetics
-        return [self.graph.modulate(coords) for coords in results]
+        return [self.beliefs.modulate(coords) for coords in results]
 
     def calculate_rhs(self, node):
         lowest_cost_neighbour = self.lowest_cost_neighbour(node)
@@ -388,7 +393,9 @@ class DStarLite(object):
 
     def lowest_cost_neighbour(self, node):
         cost = partial(self.lookahead_cost, node)
-        return min(self.neighbors(node), key=cost)
+        neighbors = self.neighbors(node)
+        min_cost = min(neighbors, key=cost)
+        return min_cost
 
     def g(self, node):
         return self.G_VALS.get(node, float('inf'))
@@ -452,39 +459,40 @@ class DStarLite(object):
             if self.g(self.position) == float('inf'):
                 return None
 
-            self.last_node = self.graph.get_current(self.agent_id).location
+            self.last_node = self.beliefs.get_current(self.agent_id).location
 
             # return the next step to be taken
             return self.lowest_cost_neighbour(self.position)
         else:
             return None
 
-    def update(self, graph):
+    def update(self, beliefs):
         """
         Update the path if necessary.
 
         parameters
         ----------
-        graph: object
-            The updated Graph instance.
+        beliefs: object
+            The updated beliefs instance.
         """
         # Update observations
-        self.graph = graph
-        self.position = graph.get_current(self.agent_id).location
-        new_obs = [obs for sublist in graph.new_obs.values() for
-                   obs in sublist]
+        self.beliefs = beliefs
+        self.obstacle_cost = 32 * math.e ** (-0.008 * self.beliefs.energy)
+        self.position = beliefs.get_current(self.agent_id).location
+        new_obs = [obs for sublist in beliefs.new_obs.values()
+                   for obs in sublist]
 
         # Update the path if there are new observations
         if new_obs:
             self.Km += self.heuristic(self.last_node, self.position)
-
-            self.update_nodes({node for wallnode in new_obs
-                              for node in self.neighbors(wallnode)
-                              if (node not in self.graph.nodes or not
-                                  self.graph.nodes[node]._is_thing(
-                                      self.graph.step,
-                                      self.graph.get_current(self.agent_id).
-                                      location))})
+            attached_locs = [(self.position[0] + att[0], self.position[1] +
+                             att[1]) for att in self.beliefs.attached]
+            self.update_nodes({node for obs in new_obs
+                              for node in self.neighbors(obs)
+                              if (node not in self.beliefs.nodes or not
+                                  self.beliefs.nodes[node]._is_thing(
+                                      self.beliefs.step, self.position,
+                                      attached_locs))})
 
             self.compute_shortest_path()
 

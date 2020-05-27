@@ -28,6 +28,7 @@ class Node(object):
             The node to the corresponding direction of this node.
         """
         self.location = location
+        self.surr_obstacles = 0
         self.terrain = (terrain, step)
         if things == {}:
             self.things = {}
@@ -235,10 +236,15 @@ class Node(object):
         # check for obstacles
         if self.terrain[0] == 'obstacle':
             return True
-
         return False
 
-    def _is_thing(self, step, agent_location, things=['block', 'entity']):
+    def _is_exp_obstacle(self):
+        if self.terrain[0] == 'obstacle' or self.surr_obstacles:
+            return True
+        return False
+
+    def _is_thing(self, step, agent_location, attached,
+                  things=['block', 'entity']):
         """
         Determine if a node is a given thing.
         By default looking for blocks and entities.
@@ -248,6 +254,8 @@ class Node(object):
             Current game step.
         agent_location: (int, int)
             The location of the agent itself.
+        attached: list of tuples
+            The location of the blocks attached to the agent.
         things: list of str
             List of things to include from {block, entity, dispenser, marker}.
         """
@@ -255,7 +263,10 @@ class Node(object):
         if agent_location == self.location:
             return False
 
-        # check for entities
+        if self.location in attached:
+            return False
+
+        # check for things
         loc_things = self.get_things(step)
         for thing in loc_things:
             if thing[0] in things:
@@ -284,13 +295,14 @@ class Graph(object):
         for x in range(-5, 6):
             for y in range(-5, 6):
                 if abs(x) + abs(y) < 6:
-                    self.nodes[(x, y)] = \
-                        Node((x, y))
+                    self.nodes[(x, y)] = Node((x, y))
+
         self.current = {agent_id: self.nodes[(0, 0)]}
         self.things = {'goals': [], 'dispensers': {}, 'taskboards': []}
         self.tasks = {}
         self.new_obs = {'obstacles': [], 'empty': [], 'agents': []}
         self.attached = []
+        self.energy = 300
 
         for node in self.nodes.values():
             x, y = node.location
@@ -346,14 +358,30 @@ class Graph(object):
         vision = self.get_vision(msg, agent_id)
         for node in self.get_local_nodes(agent_id):
             if self.nodes[node].get_terrain()[0] == 'obstacle':
+                # check for new empty spots
                 if node not in vision or vision[node]['terrain'] == 'empty':
                     self.nodes[node].set_terrain('empty', step)
                     new_empty.append(node)
+                    self.update_surroundings(node, step, operation='decrease')
 
             if node in vision:
+                # check for new obstacles
                 if self.nodes[node].get_terrain()[0] == 'empty' and \
                         vision[node]['terrain'] == 'obstacle':
                     new_obstacles.append(node)
+                    self.update_surroundings(node, step)
+
+                # check for new goals
+                if self.nodes[node].get_terrain()[0] != 'goal' and \
+                        vision[node]['terrain'] == 'goal':
+                    self.things['goals'].append(node)
+
+                known_things = self.nodes[node].get_things(step)
+
+                for seen_thing in vision[node]['things']:
+                    if seen_thing[0] in ['dispenser', 'taskboard'] and \
+                            seen_thing not in known_things:
+                        self.add_thing(seen_thing, node)
 
                 self.nodes[node].set_terrain(vision[node]['terrain'], step)
                 self.nodes[node].add_things(step, vision[node]['things'])
@@ -363,6 +391,44 @@ class Graph(object):
         self.tasks = msg["content"]["percept"]["tasks"]
         self.attached = [tuple(x) for x in
                          msg["content"]["percept"]["attached"]]
+        self.energy = msg["content"]["percept"]["energy"]
+
+    def add_thing(self, thing, location):
+        """
+        Adds given thing to self.things.
+
+        parameters
+        -----------
+        thing: tuple
+            (type, details) of the thing
+        location: tuple
+            the location of the thing
+        """
+
+        if thing[0] == 'dispenser':
+            if thing[1] in self.things['dispensers']:
+                self.things['dispensers'][thing[1]].append(location)
+            else:
+                self.things['dispensers'][thing[1]] = [location]
+        else:
+            self.things[thing[0] + 's'].append(location)
+
+    def update_surroundings(self, node, step, operation='increase'):
+        # print("updating node:", node)
+        if operation == 'increase':
+            add = 1
+        else:
+            add = -1
+
+        for x in range(node[0] - 1, node[0] + 2):
+            for y in range(node[1] - 1, node[1] + 2):
+                loc = self.modulate((x, y))
+                if loc != node:
+                    if loc in self.nodes:
+                        self.nodes[loc].surr_obstacles += add
+                    else:
+                        self.nodes[loc] = Node(loc, step=step)
+                        self.nodes[loc].surr_obstacles += add
 
     def update_current(self, msg, agent_id):
         """
@@ -398,17 +464,17 @@ class Graph(object):
             node.add_direction(north=self.nodes[self.modulate((x, y-1))])
             self.nodes[self.modulate((x, y-1))].add_direction(south=node)
 
-        if (x+1, y) in self.nodes and \
+        if self.modulate((x+1, y)) in self.nodes and \
                 node.directions['e'] is None:
             node.add_direction(east=self.nodes[self.modulate((x+1, y))])
             self.nodes[self.modulate((x+1, y))].add_direction(west=node)
 
-        if (x, y+1) in self.nodes and \
+        if self.modulate((x, y+1)) in self.nodes and \
                 node.directions['s'] is None:
             node.add_direction(south=self.nodes[self.modulate((x, y+1))])
             self.nodes[self.modulate((x, y+1))].add_direction(north=node)
 
-        if (x-1, y) in self.nodes and \
+        if self.modulate((x-1, y)) in self.nodes and \
                 node.directions['w'] is None:
             node.add_direction(west=self.nodes[self.modulate((x-1, y))])
             self.nodes[self.modulate((x-1, y))].add_direction(east=node)
@@ -439,10 +505,6 @@ class Graph(object):
             for x, y in terrain[option]:
                 new_x, new_y = self.modulate((x + cx, y + cy))
 
-                if option == "goal":
-                    if (new_x, new_y) not in self.things['goals']:
-                        self.things['goals'].append((new_x, new_y))
-
                 if (new_x, new_y) in vision:
                     vision[(new_x, new_y)]['terrain'] = option
                 else:
@@ -450,18 +512,6 @@ class Graph(object):
 
         for thing in things:
             new_x, new_y = thing['x'] + cx, thing['y'] + cy
-
-            if thing['type'] == 'taskboard':
-                if (new_x, new_y) not in self.things['taskboards']:
-                    self.things['taskboards'].append((new_x, new_y))
-            elif thing['type'] == 'dispensers':
-                if thing['details'] not in self.things['dispensers']:
-                    self.things['dispensers'][thing['details']] = \
-                        [(new_x, new_y)]
-                elif (new_x, new_y) not in \
-                        self.things['dispensers'][thing['details']]:
-                    self.things['dispensers'][thing['details']].\
-                        append((new_x, new_y))
 
             if (new_x, new_y) in vision:
                 vision[(new_x, new_y)]['things'].append((thing['type'],
@@ -591,6 +641,7 @@ class Graph(object):
             real_node = self.modulate((node[0] + cx, node[1] + cy))
             local_things.append((node, self.nodes[real_node].
                                  get_things(step=self.step)))
+
         return local_things
 
     def get_new_nodes(self, msg, agent_id):
@@ -755,6 +806,68 @@ class Graph(object):
         # Update self.attached
         for i, location in enumerate(self.attached):
             self.attached[i] = self.modulate(location)
+
+    def print_local(self, agent_id, all=False):
+        """
+        Print the map as represented by the beliefs.
+
+        arguments
+        ----------
+        all: bool
+            If True, prints the entire known map.
+            If False, prints a 10 by 10 area.
+        """
+        curr_x, curr_y = self.get_current(agent_id).location
+
+        if all:
+            min_x = min(self.nodes.keys(), key=lambda x: x[0])[0]
+            max_x = max(self.nodes.keys(), key=lambda x: x[0])[0]
+            min_y = min(self.nodes.keys(), key=lambda x: x[1])[1]
+            max_y = max(self.nodes.keys(), key=lambda x: x[1])[1]
+        else:
+            min_x = curr_x - 5
+            max_x = curr_x + 5
+            min_y = curr_y - 5
+            max_y = curr_y + 5
+
+        print_res = ''
+
+        for y in range(min_y, max_y + 1):
+            for x in range(min_x, max_x + 1):
+                if (x, y) == (curr_x, curr_y):
+                    print_res += f"{'A' + str(agent_id):<3}"
+                elif (x, y) == (0, 0):
+                    print_res += f"{'O':<3}"
+                elif (x, y) in self.nodes:
+                    things = self.nodes[(x, y)].get_things(step=self.step)
+                    terrain = self.nodes[(x, y)].get_terrain()[0]
+
+                    print_tmp = ''
+                    for (thing, detail) in things:
+                        if thing == 'entity' and (x, y) != (curr_x, curr_y):
+                            print_tmp = f"{'A?':<3}"
+                        elif thing == 'block' and not print_tmp:
+                            print_tmp = f"{detail:<3}"
+                        elif thing == 'dispenser' and not print_tmp:
+                            print_tmp = f"{'d' + detail[1]:<3}"
+                        elif thing == 'marker' and not print_tmp:
+                            print_tmp = f"{'M':<3}"
+                        elif thing == 'taskboard' and not print_tmp:
+                            print_tmp = f"{'T':<3}"
+                    print_res += print_tmp
+
+                    if not print_tmp:
+                        if terrain == 'empty':
+                            print_res += f"{'.':<3}"
+                        elif terrain == 'obstacle':
+                            print_res += f"{'#':<3}"
+                        elif terrain == 'goal':
+                            print_res += f"{'G':<3}"
+                else:
+                    print_res += f"{'':<3}"
+            print_res += '\n'
+
+        print(print_res)
 
     @staticmethod
     def _agent_moved(msg):
