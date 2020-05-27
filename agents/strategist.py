@@ -185,7 +185,7 @@ class Strategist(Server):
                         print(f'{main_agent._user} merged with {agent._user}')
 
                     for agent in new_graph.current:
-                            self.get_agent(agent).beliefs = new_graph
+                        self.get_agent(agent).beliefs = new_graph
 
                 else:
                     self.calculate_dimensions(main_agent, agent, location)
