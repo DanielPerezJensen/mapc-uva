@@ -13,12 +13,17 @@ def main():
     # In case teamSize is returned and not None, start up the agents
     if teamSize:
         a_list = []
+        input_queue = Queue(maxsize=teamSize)
+        output_queue = Queue(maxsize=teamSize)
+        
+        strategist = Strategist(f"Strategist", [input_queue, output_queue])
+        strategist.start()
 
         for i in range(1, teamSize + 1):
             a_list.append(SuperAgent(f"agentA{i}", "1"))
             a_list[-1].start()
 
-
+            
 def get_teamSize():
     """
     Returns the configuration of the server as
@@ -68,23 +73,6 @@ def get_teamSize():
         return None
 
     sock.close()
-
-
-def main():
-    teamSize = get_teamSize()
-
-    # In case teamSize is returned and not None, start up the agents
-    if teamSize:
-
-        a_list = []
-        input_queue = Queue(maxsize=teamSize)
-        output_queue = Queue(maxsize=teamSize)
-
-        strategist = Strategist(f"Strategist", [input_queue, output_queue])
-        strategist.start()
-        for i in range(1, teamSize + 1):
-            a_list.append(SuperAgent(f"agentA{i}", "1"))
-            a_list[-1].start()
 
 
 if __name__ == "__main__":
