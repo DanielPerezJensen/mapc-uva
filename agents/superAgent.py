@@ -48,9 +48,9 @@ class SuperAgent(*AGENTS, BDIAgent):
                     # Update beliefs
                     self.beliefs.update(msg, agent_id)
 
-                    # Send a message to the strategist that if has updated its
-                    # beliefs. Agent can continue when all agents updated their
-                    # belief.
+                    # Send a message to the strategist that the agent's beliefs
+                    # have been updated. The agents will continue when all
+                    # agents updated their belief.
                     if hasattr(self, 'input_queue'):
                         self.input_queue.put(('update', self))
                         self.input_queue.join()
