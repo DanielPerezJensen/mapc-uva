@@ -46,8 +46,6 @@ class Agent(Server):
             x and y coordinates of the goal location.
         agent_id: int
             id of the agent.
-        new_obs: list
-            A list of the new observations.
         adjacent: bool
             If True, navigates to a block next to the goal location,
             e.g. for dispensers, taskboards etc.

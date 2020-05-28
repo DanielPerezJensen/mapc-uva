@@ -135,7 +135,7 @@ class Node(object):
         else:
             return sorted(self.things.items())
 
-    def add_things(self, objects, step):
+    def add_things(self, step, objects):
         """
         Add things to the node at a specific step and store it in a list.
         It also removes any duplicates.
@@ -153,17 +153,18 @@ class Node(object):
             elif isinstance(objects, tuple):
                 self.things[step].append(objects)
         else:
-            if isinstance(objects, list):
+            if isinstance(objects, list) and objects:
                 self.things[step] = objects
             elif isinstance(objects, tuple):
                 self.things[step] = [objects]
 
-        self.things[step] = list(dict.fromkeys(self.things[step]))
+        if step in self.things:
+            self.things[step] = list(dict.fromkeys(self.things[step]))
 
     def get_direction(self, width=None, height=None, direction=None):
         """
         Return the node in the specified direction. If no direction is provided
-        the current node is returned.
+        a list of all neighbours is returned.
 
         Arguments
         ---------
@@ -204,7 +205,6 @@ class Node(object):
                                        direction='s'),
                     self.get_direction(width=width, height=height,
                                        direction='w')]
-
 
     def add_direction(self, north=None, east=None, south=None, west=None):
         """
@@ -295,8 +295,7 @@ class Graph(object):
         for x in range(-5, 6):
             for y in range(-5, 6):
                 if abs(x) + abs(y) < 6:
-                    self.nodes[self.modulate((x, y))] = \
-                        Node(self.modulate((x, y)))
+                    self.nodes[(x, y)] = Node((x, y))
 
         self.current = {agent_id: self.nodes[(0, 0)]}
         self.things = {'goals': [], 'dispensers': {}, 'taskboards': []}
@@ -307,14 +306,14 @@ class Graph(object):
 
         for node in self.nodes.values():
             x, y = node.location
-            if self.modulate((x, y-1)) in self.nodes.keys():
-                node.add_direction(north=self.nodes[self.modulate((x, y-1))])
-            if self.modulate((x+1, y)) in self.nodes.keys():
-                node.add_direction(east=self.nodes[self.modulate((x+1, y))])
-            if self.modulate((x, y+1)) in self.nodes.keys():
-                node.add_direction(south=self.nodes[self.modulate((x, y+1))])
-            if self.modulate((x-1, y)) in self.nodes.keys():
-                node.add_direction(west=self.nodes[self.modulate((x-1, y))])
+            if (x, y-1) in self.nodes.keys():
+                node.add_direction(north=self.nodes[(x, y-1)])
+            if (x+1, y) in self.nodes.keys():
+                node.add_direction(east=self.nodes[(x+1, y)])
+            if (x, y+1) in self.nodes.keys():
+                node.add_direction(south=self.nodes[(x, y+1)])
+            if (x-1, y) in self.nodes.keys():
+                node.add_direction(west=self.nodes[(x-1, y)])
 
     def __str__(self):
         """
@@ -348,18 +347,16 @@ class Graph(object):
         """
         self.update_current(msg, agent_id)
         self.update_step(msg['content']['step'])
-        if agent_moved(msg):
-            for new_node in self.get_new_nodes(msg, agent_id):
-                if new_node in self.nodes:
-                    self.add_neighbours(self.nodes[new_node])
-                else:
+        if self._agent_moved(msg):
+            for new_node in self.get_new_node_locations(msg, agent_id):
+                if new_node not in self.nodes:
                     self.nodes[new_node] = Node(new_node, step=self.get_step())
-                    self.add_neighbours(self.nodes[new_node])
+                self.add_neighbours(self.nodes[new_node])
 
         new_obstacles, new_empty = [], []
         step = self.get_step()
         vision = self.get_vision(msg, agent_id)
-        for node in self.get_local_nodes(agent_id):
+        for node in self.get_local_node_locations(agent_id):
             if self.nodes[node].get_terrain()[0] == 'obstacle':
                 # check for new empty spots
                 if node not in vision or vision[node]['terrain'] == 'empty':
@@ -387,10 +384,11 @@ class Graph(object):
                         self.add_thing(seen_thing, node)
 
                 self.nodes[node].set_terrain(vision[node]['terrain'], step)
-                self.nodes[node].add_things(vision[node]['things'], step)
+                self.nodes[node].add_things(step, vision[node]['things'])
 
         self.new_obs = {'obstacles': new_obstacles, 'empty': new_empty,
-                        'agents': self.get_new_agents(vision, agent_id)}
+                        'agents': self.get_new_agent_locations(vision,
+                                                               agent_id)}
         self.tasks = msg["content"]["percept"]["tasks"]
         self.attached = [tuple(x) for x in
                          msg["content"]["percept"]["attached"]]
@@ -442,11 +440,12 @@ class Graph(object):
         msg: dict
             The request-action message from the server.
         """
-        if agent_moved(msg):
+        if self._agent_moved(msg):
             prev_direction = msg['content']['percept']['lastActionParams'][0]
-            # Failsafe incase new node doesn't exist.
             self.current[agent_id] = \
-                self.current[agent_id].directions[prev_direction]
+                self.nodes[self.get_current(agent_id).
+                           get_direction(width=self.width, height=self.height,
+                                         direction=prev_direction)]
 
     def update_step(self, step):
         """
@@ -503,9 +502,9 @@ class Graph(object):
         things = msg['content']['percept']['things']
         cx, cy = self.get_current(agent_id).location
 
-        for option, locations in terrain.items():
-            for x, y in locations:
-                new_x, new_y = x + cx, y + cy
+        for option in terrain:
+            for x, y in terrain[option]:
+                new_x, new_y = self.modulate((x + cx, y + cy))
 
                 if (new_x, new_y) in vision:
                     vision[(new_x, new_y)]['terrain'] = option
@@ -530,7 +529,19 @@ class Graph(object):
         """
         return self.current[agent_id]
 
-    def get_new_agents(self, vision, agent_id):
+    def get_node(self, node):
+        """
+        Return the node if it exists, otherwise None.
+
+        Arguments
+        ---------
+        node: (int, int)
+            The coordinates of the requested node.
+        """
+        if node in self.nodes.keys():
+            return self.nodes[node]
+
+    def get_new_agent_locations(self, vision, agent_id):
         """
         Create a list with the locations on which there are currently now agent
         but not the previous step.
@@ -556,25 +567,24 @@ class Graph(object):
                         agents.append(node)
         return agents
 
-    def get_agents(self, step=0, team='A'):
+    def get_agent_locations(self, step=0, team='A'):
         """
         Get the agents and location on a certain step from a specific team.
 
         Arguments:
-        step: intagent_
+        step: int
             The step from which the agents are collected.
         team: str
             The team can be either A or B.
         """
         agents = []
         for node in self.nodes:
-            node = self.modulate(node)
             for thing in self.nodes[node].get_things(step):
                 if thing[0] == 'entity' and thing[1] == team:
                     agents.append((node, thing))
         return agents
 
-    def get_local_nodes(self, agent_id, offset=None):
+    def get_local_node_locations(self, agent_id, offset=None):
         """
         Return the location of the nodes around within the agent's local
         vision. By default the coordinates are create with respect to the
@@ -594,10 +604,10 @@ class Graph(object):
         for x in range(-5, 6):
             for y in range(-5, 6):
                 if abs(x) + abs(y) < 6:
-                    nodes.append((self.modulate((x + cx, y + cy))))
+                    nodes.append(self.modulate((x + cx, y + cy)))
         return nodes
 
-    def get_local_agents(self, agent_id, team='A'):
+    def get_local_agent_locations(self, agent_id, team='A'):
         """
         Return the location of the agents from a certain team within
         the agent's own local vision.
@@ -611,7 +621,7 @@ class Graph(object):
         """
         local_agents = []
         cx, cy = self.get_current(agent_id).location
-        for node in self.get_local_nodes(agent_id, offset=(0, 0)):
+        for node in self.get_local_node_locations(agent_id, offset=(0, 0)):
             if node != (0, 0):
                 real_node = self.modulate((node[0] + cx, node[1] + cy))
                 for thing in self.nodes[real_node].get_things(step=self.step):
@@ -628,13 +638,14 @@ class Graph(object):
         """
         local_things = []
         cx, cy = self.get_current(agent_id).location
-        for node in self.get_local_nodes(agent_id, offset=(0, 0)):
+        for node in self.get_local_node_locations(agent_id, offset=(0, 0)):
             real_node = self.modulate((node[0] + cx, node[1] + cy))
-            local_things.append(
-                (node, self.nodes[real_node].get_things(step=self.step)))
+            local_things.append((node, self.nodes[real_node].
+                                 get_things(step=self.step)))
+
         return local_things
 
-    def get_new_nodes(self, msg, agent_id):
+    def get_new_node_locations(self, msg, agent_id):
         """
         Get coordinates of the new nodes relative to the root node.
 
@@ -706,12 +717,11 @@ class Graph(object):
 
     def modulate(self, location):
         """
-        Apply the width and height of the map as a modulo on the location
-        values. Does nothing if no width or height have been set yet.
+        Apply the width and height of the map as a modulo to the coordinates.
 
         Arguments
         ---------
-        coordinates: (int, int)
+        location: (int, int)
             The location of the given node.
         """
         x, y = location
@@ -721,42 +731,82 @@ class Graph(object):
             y = y % self.height
         return (x, y)
 
-    def modulate_graph(self, width, height):
+    def apply_dimensions_to_graph(self):
         """
-        Apply the width and height of the map as a modulo to every node in the
-        graph and update/add nodes where neccessary.
+        Apply the dimensions (width and height) to the nodes in the graph.
+        This way the agents knows when it has looped the map.
         """
-        self.width = width
-        self.height = height
+        current_locations = []
+        for agent in self.current:
+            current_locations.append((agent, self.get_current(agent).location))
 
-        for node in self.nodes:
-            if self.modulate(node) in self.nodes:
-                if node != self.modulate(node):
-                    if self.nodes[node].get_terrain()[1] > \
-                            self.nodes[self.modulate(node)].get_terrain()[1]:
-                        self.nodes[self.modulate(node)].set_terrain(
-                            self.nodes[node].get_terrain()[0],
-                            self.nodes[node].get_terrain()[1])
+        for node in list(self.nodes):
+            if self.modulate(node) != node:
+                if self.modulate(node) in self.nodes:
+                    if self.nodes[self.modulate(node)].get_terrain()[1] < \
+                            self.nodes[node].get_terrain()[1]:
+                        self.nodes[self.modulate(node)].\
+                            set_terrain(*self.nodes[node].get_terrain())
 
                     for things in self.nodes[node].get_things():
-                        self.nodes[self.modulate(node)].add_things(things[0],
-                                                                   things[1])
+                        self.nodes[self.modulate(node)].add_things(*things)
+
+                    del self.nodes[node]
+
+                else:
+                    x, y = node
+                    self.nodes[self.modulate((x, y))] = self.nodes[node]
+                    del self.nodes[((x, y))]
+                    self.nodes[self.modulate((x, y))].\
+                        set_location(self.modulate((x, y)))
+
+        for x, y in self.nodes:
+            if self.modulate((x, y-1)) in self.nodes:
+                self.nodes[self.modulate((x, y))].\
+                    add_direction(north=self.nodes[self.modulate((x, y-1))])
+                self.nodes[self.modulate((x, y-1))].\
+                    add_direction(south=self.nodes[self.modulate((x, y))])
+
+            if self.modulate((x+1, y)) in self.nodes:
+                self.nodes[self.modulate((x, y))].\
+                    add_direction(east=self.nodes[self.modulate((x+1, y))])
+                self.nodes[self.modulate((x+1, y))].\
+                    add_direction(west=self.nodes[self.modulate((x, y))])
+
+            if self.modulate((x, y+1)) in self.nodes:
+                self.nodes[self.modulate((x, y))].\
+                    add_direction(south=self.nodes[self.modulate((x, y+1))])
+                self.nodes[self.modulate((x, y+1))].\
+                    add_direction(north=self.nodes[self.modulate((x, y))])
+
+            if self.modulate((x-1, y)) in self.nodes:
+                self.nodes[self.modulate((x, y))].\
+                    add_direction(west=self.nodes[self.modulate((x-1, y))])
+                self.nodes[self.modulate((x-1, y))].\
+                    add_direction(east=self.nodes[self.modulate((x, y))])
+
+        # Update current
+        for agent, location in current_locations:
+            self.current[agent] = self.nodes[self.modulate(location)]
+
+        # Update self.things
+        for thing in self.things:
+            if thing == 'dispensers':
+                for block in self.things[thing]:
+                    for i, location in enumerate(self.things[thing][block]):
+                        self.things[thing][block][i] = self.modulate(location)
             else:
-                self.nodes[self.modulate(node)] = \
-                    Node(self.modulate(node),
-                         terrain=self.nodes[node].get_terrain()[0],
-                         step=self.nodes[node].get_terrain()[1])
+                for i, location in enumerate(self.things[thing]):
+                    self.things[thing][i] = self.modulate(location)
 
-                for things in self.nodes[node].get_things():
-                    self.nodes[self.modulate(node)].add_things(things[0],
-                                                               things[1])
+        # Update self.new_obs
+        for obstacle in self.new_obs:
+            for i, location in enumerate(self.new_obs[obstacle]):
+                self.new_obs[obstacle][i] = self.modulate(location)
 
-        for agent, node in self.current.items():
-            self.current[agent] = \
-                self.nodes[self.modulate(node.get_location())]
-
-        for node in self.nodes:
-            self.add_neighbours(self.nodes[node])
+        # Update self.attached
+        for i, location in enumerate(self.attached):
+            self.attached[i] = self.modulate(location)
 
     def print_local(self, agent_id, all=False):
         """
@@ -820,14 +870,16 @@ class Graph(object):
 
         print(print_res)
 
-def agent_moved(msg):
-    """
-    Return True if the agent's last action was 'move' and it was successful.
-    """
-    if msg['content']['percept']['lastAction'] == 'move' and \
-            msg['content']['percept']['lastActionResult'] == 'success':
-        return True
-    return False
+    @staticmethod
+    def _agent_moved(msg):
+        """
+        Return True if the agent's last action was 'move'
+        and it was successful.
+        """
+        if msg['content']['percept']['lastAction'] == 'move' and \
+                msg['content']['percept']['lastActionResult'] == 'success':
+            return True
+        return False
 
 
 def merge_graphs(g1, agent1, g2, agent2, offset):
@@ -849,53 +901,66 @@ def merge_graphs(g1, agent1, g2, agent2, offset):
 
     rx, ry = g1_x + offset[0] - g2_x, g1_y + offset[1] - g2_y
 
+    temp = []
+    for agent in g2.current:
+        temp.append((agent, g2.get_current(agent).location))
+
     for x, y in g2.nodes:
-        new_x, new_y = g1.modulate((rx + x, ry + y))
+        new_x, new_y = g1.modulate((x + rx, y + ry))
         if (new_x, new_y) in g1.nodes:
             # Get the most up-to-date terrain information
             if g1.nodes[(new_x, new_y)].get_terrain()[1] < \
                     g2.nodes[(x, y)].get_terrain()[1]:
-                g2_terrain = g2.nodes[(x, y)].get_terrain()[0]
-                g2_step = g2.nodes[(x, y)].get_terrain()[1]
-                g1.nodes[(new_x, new_y)].set_terrain(g2_terrain, g2_step)
+                g1.nodes[(new_x, new_y)].\
+                    set_terrain(*g2.nodes[(x, y)].get_terrain())
 
             for things in g2.nodes[(x, y)].get_things():
-                g1.nodes[(new_x, new_y)].add_things(things[1], things[0])
+                g1.nodes[(new_x, new_y)].add_things(*things)
+
         else:
             g1.nodes[(new_x, new_y)] = g2.nodes[(x, y)]
             g1.nodes[(new_x, new_y)].set_location((new_x, new_y))
 
-            if (x, y-1) in g1.nodes:
+            if g1.modulate((new_x, new_y-1)) in g1.nodes:
                 g1.nodes[(new_x, new_y)].add_direction(
-                    north=g1.nodes[(x, y-1)])
-                g1.nodes[(x, y-1)].add_direction(
-                    south=g1.nodes[(new_x, new_y)])
-            if (x+1, y) in g1.nodes:
-                g1.nodes[(new_x, new_y)].add_direction(east=g1.nodes[(x+1, y)])
-                g1.nodes[(x+1, y)].add_direction(west=g1.nodes[(new_x, new_y)])
-            if (x, y+1) in g1.nodes:
-                g1.nodes[(new_x, new_y)].add_direction(
-                    south=g1.nodes[(x, y+1)])
-                g1.nodes[(x, y+1)].add_direction(
-                    north=g1.nodes[(new_x, new_y)])
-            if (x-1, y) in g1.nodes:
-                g1.nodes[(new_x, new_y)].add_direction(west=g1.nodes[(x-1, y)])
-                g1.nodes[(x-1, y)].add_direction(east=g1.nodes[(new_x, new_y)])
+                    north=g1.nodes[g1.modulate((new_x, new_y-1))])
+                g1.nodes[g1.modulate((new_x, new_y-1))].\
+                    add_direction(south=g1.nodes[(new_x, new_y)])
 
-    for agent in g2.current:
-        temp = g2.get_current(agent).location
-        g1.current[agent] = g1.nodes[g1.modulate((rx + temp[0], ry + temp[1]))]
+            if g1.modulate((new_x+1, new_y)) in g1.nodes:
+                g1.nodes[(new_x, new_y)].add_direction(
+                    east=g1.nodes[g1.modulate((new_x+1, new_y))])
+                g1.nodes[g1.modulate((new_x+1, new_y))].\
+                    add_direction(west=g1.nodes[(new_x, new_y)])
+
+            if g1.modulate((new_x, new_y+1)) in g1.nodes:
+                g1.nodes[(new_x, new_y)].add_direction(
+                    south=g1.nodes[g1.modulate((new_x, new_y+1))])
+                g1.nodes[g1.modulate((new_x, new_y+1))].\
+                    add_direction(north=g1.nodes[(new_x, new_y)])
+
+            if g1.modulate((new_x-1, new_y)) in g1.nodes:
+                g1.nodes[(new_x, new_y)].add_direction(
+                    west=g1.nodes[g1.modulate((new_x-1, new_y))])
+                g1.nodes[g1.modulate((new_x-1, new_y))].\
+                    add_direction(east=g1.nodes[(new_x, new_y)])
+
+    for agent, location in temp:
+        g1.current[agent] = g1.nodes[g1.modulate((location[0] + rx,
+                                                  location[1] + ry))]
 
     for thing in g2.things:
         if thing == 'dispensers':
             for block in g2.things[thing]:
                 for x, y in g2.things[thing][block]:
-                    new_x, new_y = rx + x, ry + y
+                    new_x, new_y = g1.modulate((x + rx, y + ry))
+                    if block not in g1.things[thing]:
+                        g1.things[thing][block] = []
                     if (new_x, new_y) not in g1.things['dispensers'][block]:
                         g1.things['dispensers'][block].append((new_x, new_y))
         else:
             for x, y in g2.things[thing]:
-                new_x, new_y = rx + x, ry + y
+                new_x, new_y = g1.modulate((x + rx, y + ry))
                 if (new_x, new_y) not in g1.things[thing]:
                     g1.things[thing].append((new_x, new_y))
 
@@ -1015,13 +1080,15 @@ if __name__ == '__main__':
                 "energy":300},\
             "deadline":1587837763855}}')
 
-    graph1 = Graph(0)
-    graph1.update(agent_0_step_0, 0)
-    graph1.update(agent_0_step_1, 0)
+    graph0 = Graph(0)
+    graph0.update(agent_0_step_0, 0)
+    graph0.update(agent_0_step_1, 0)
 
     graph2 = Graph(2)
     graph2.update(agent_2_step_0, 2)
     graph2.update(agent_2_step_1, 2)
+    # graph2 = merge_graphs(graph0, 0, graph2, 2, (1, 2))
 
-    graph2 = merge_graphs(graph1, 0, graph2, 2, (1, 2))
-    print(graph2)
+    graph2.print_local(2, all=True)
+    # graph2.apply_dimensions_to_graph()
+    # print(graph2)

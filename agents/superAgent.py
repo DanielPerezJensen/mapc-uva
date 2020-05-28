@@ -4,7 +4,10 @@ from .builder import Builder
 from .defender import Defender
 from .mapper import Mapper
 from .spy import Spy
+
+import json
 import time
+import threading
 
 AGENTS = [Attacker, Builder, Defender, Mapper, Spy]
 
@@ -22,22 +25,43 @@ class SuperAgent(*AGENTS, BDIAgent):
         """
         Function that runs the agents.
         """
+        strategist = [agent for agent in threading.enumerate()
+                      if agent.name == 'Strategist'][0]
+        if strategist:
+            self.input_queue = strategist.input_queue
+            self.output_queue = strategist.output_queue
+        else:
+            print('Agents play without the strategist.')
+
         while True:
             # Receive a message.
             msg = self.receive_msg()
+
             time.sleep(0.6)  # uncomment to add delay per step in agent.
 
             if msg:
                 # Parse the response.
                 if msg["type"] == "request-action":
-                    self.beliefs.update(msg, self._user_id)
+                    # Get the request id
+                    request_id = self._get_request_id(msg)
+                    agent_id = self._user_id
+                    # Update beliefs
+                    self.beliefs.update(msg, agent_id)
 
-                    # Get agent type
+                    # Send a message to the strategist that the agent's beliefs
+                    # have been updated. The agents will continue when all
+                    # agents updated their belief.
+                    if hasattr(self, 'input_queue'):
+                        self.input_queue.put(('update', self))
+                        self.input_queue.join()
+
+                        self.input_queue.put(('merge', self))
+
                     # TODO: Listen to strategist thread for role
                     # TODO: Set role as chosen by strategist
-                    agent_type = AGENTS[1]
+                    agent_type = AGENTS[3]
 
-                    # Read last action if it randomly failed
+                    # # Read last action if it randomly failed
                     if msg['content']['percept']['lastActionResult'] == \
                             'failed_random' and self.last_intention:
                         if self.last_intention.method.__name__ != "nav_to":
@@ -47,7 +71,7 @@ class SuperAgent(*AGENTS, BDIAgent):
                         self.pretty_print([x.description
                                            for x in self.intention_queue])
 
-                    # If intention queue is empty add intention (temporary)
+                    # If intention queue is empty, add intention (temporary)
                     if not self.intention_queue:
                         # Get intention from agent_type
                         intention_addition = agent_type.get_intention(self)
@@ -68,15 +92,6 @@ class SuperAgent(*AGENTS, BDIAgent):
                         self.send_request(
                             self._add_request_id(action, request_id))
                         self.pretty_print("Done with action", request_id)
-
-                    # # Makes the agents walk around randomly
-                    # options = ['single', 'random', 'east']
-                    # action = selected_agent.explore(self, agent_id, options)
-                    # #action = self.skip()
-                    #
-                    # # Send action to server
-                    # self.send_request(self._add_request_id(action[0],
-                    #                                        request_id))
 
                     # Provide timing information
                     if self._timer:
