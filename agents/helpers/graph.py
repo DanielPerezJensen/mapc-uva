@@ -348,7 +348,7 @@ class Graph(object):
         self.update_current(msg, agent_id)
         self.update_step(msg['content']['step'])
         if self._agent_moved(msg):
-            for new_node in self.get_new_nodes(msg, agent_id):
+            for new_node in self.get_new_node_locations(msg, agent_id):
                 if new_node not in self.nodes:
                     self.nodes[new_node] = Node(new_node, step=self.get_step())
                 self.add_neighbours(self.nodes[new_node])
@@ -356,7 +356,7 @@ class Graph(object):
         new_obstacles, new_empty = [], []
         step = self.get_step()
         vision = self.get_vision(msg, agent_id)
-        for node in self.get_local_nodes(agent_id):
+        for node in self.get_local_node_locations(agent_id):
             if self.nodes[node].get_terrain()[0] == 'obstacle':
                 # check for new empty spots
                 if node not in vision or vision[node]['terrain'] == 'empty':
@@ -387,7 +387,8 @@ class Graph(object):
                 self.nodes[node].add_things(step, vision[node]['things'])
 
         self.new_obs = {'obstacles': new_obstacles, 'empty': new_empty,
-                        'agents': self.get_new_agents(vision, agent_id)}
+                        'agents': self.get_new_agent_locations(vision,
+                                                               agent_id)}
         self.tasks = msg["content"]["percept"]["tasks"]
         self.attached = [tuple(x) for x in
                          msg["content"]["percept"]["attached"]]
@@ -540,7 +541,7 @@ class Graph(object):
         if node in self.nodes.keys():
             return self.nodes[node]
 
-    def get_new_agents(self, vision, agent_id):
+    def get_new_agent_locations(self, vision, agent_id):
         """
         Create a list with the locations on which there are currently now agent
         but not the previous step.
@@ -566,7 +567,7 @@ class Graph(object):
                         agents.append(node)
         return agents
 
-    def get_agents(self, step=0, team='A'):
+    def get_agent_locations(self, step=0, team='A'):
         """
         Get the agents and location on a certain step from a specific team.
 
@@ -583,7 +584,7 @@ class Graph(object):
                     agents.append((node, thing))
         return agents
 
-    def get_local_nodes(self, agent_id, offset=None):
+    def get_local_node_locations(self, agent_id, offset=None):
         """
         Return the location of the nodes around within the agent's local
         vision. By default the coordinates are create with respect to the
@@ -606,7 +607,7 @@ class Graph(object):
                     nodes.append(self.modulate((x + cx, y + cy)))
         return nodes
 
-    def get_local_agents(self, agent_id, team='A'):
+    def get_local_agent_locations(self, agent_id, team='A'):
         """
         Return the location of the agents from a certain team within
         the agent's own local vision.
@@ -620,7 +621,7 @@ class Graph(object):
         """
         local_agents = []
         cx, cy = self.get_current(agent_id).location
-        for node in self.get_local_nodes(agent_id, offset=(0, 0)):
+        for node in self.get_local_node_locations(agent_id, offset=(0, 0)):
             if node != (0, 0):
                 real_node = self.modulate((node[0] + cx, node[1] + cy))
                 for thing in self.nodes[real_node].get_things(step=self.step):
@@ -637,14 +638,14 @@ class Graph(object):
         """
         local_things = []
         cx, cy = self.get_current(agent_id).location
-        for node in self.get_local_nodes(agent_id, offset=(0, 0)):
+        for node in self.get_local_node_locations(agent_id, offset=(0, 0)):
             real_node = self.modulate((node[0] + cx, node[1] + cy))
             local_things.append((node, self.nodes[real_node].
                                  get_things(step=self.step)))
 
         return local_things
 
-    def get_new_nodes(self, msg, agent_id):
+    def get_new_node_locations(self, msg, agent_id):
         """
         Get coordinates of the new nodes relative to the root node.
 
@@ -953,6 +954,8 @@ def merge_graphs(g1, agent1, g2, agent2, offset):
             for block in g2.things[thing]:
                 for x, y in g2.things[thing][block]:
                     new_x, new_y = g1.modulate((x + rx, y + ry))
+                    if block not in g1.things[thing]:
+                        g1.things[thing][block] = []
                     if (new_x, new_y) not in g1.things['dispensers'][block]:
                         g1.things['dispensers'][block].append((new_x, new_y))
         else:
@@ -1084,8 +1087,8 @@ if __name__ == '__main__':
     graph2 = Graph(2)
     graph2.update(agent_2_step_0, 2)
     graph2.update(agent_2_step_1, 2)
-    graph2 = merge_graphs(graph0, 0, graph2, 2, (1, 2))
+    # graph2 = merge_graphs(graph0, 0, graph2, 2, (1, 2))
 
-    print(graph2)
-    graph2.apply_dimensions_to_graph()
-    print(graph2)
+    graph2.print_local(2, all=True)
+    # graph2.apply_dimensions_to_graph()
+    # print(graph2)

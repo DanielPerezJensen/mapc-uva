@@ -86,12 +86,13 @@ class Strategist(Server):
             of the agent objects.
         """
         potential_agents = {}
-        main_local_agents = main_agent.beliefs.get_local_agents(main_agent.
-                                                                _user_id)
+        main_local_agents = main_agent.beliefs.\
+            get_local_agent_locations(main_agent._user_id)
 
         for agent in self.get_agents(main_agent.name):
             local_agents = [(-x, -y) for (x, y) in
-                            agent.beliefs.get_local_agents(agent._user_id)]
+                            agent.beliefs.
+                            get_local_agent_locations(agent._user_id)]
             for location in main_local_agents:
                 if location in local_agents:
                     if location in potential_agents.keys():
@@ -119,9 +120,8 @@ class Strategist(Server):
             A dictionary where each key is a location and each value is a list
             containing potential agents in that location.
         """
-        main_local_nodes = main_agent.beliefs.get_local_nodes(main_agent.
-                                                              _user_id,
-                                                              offset=(0, 0))
+        main_local_nodes = main_agent.beliefs.\
+            get_local_node_locations(main_agent._user_id, offset=(0, 0))
         main_current_node = main_agent.beliefs.get_current(main_agent.
                                                            _user_id).location
         for location in potential_agents:
