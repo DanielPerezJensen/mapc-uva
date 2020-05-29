@@ -87,11 +87,17 @@ class Agent(Server):
             action = self.move(direction)
             return action
 
-    def current_info(self, info):
-        if info == 'location':
-            return self.beliefs.get_current(self._user_id).location
-        elif info == 'node':
-            return self.beliefs.get_current(self._user_id)
+    def current_node(self):
+        """
+        Returns the node object on which the agent is currently located
+        """
+        return self.beliefs.get_current(self._user_id)
+
+    def current_location(self):
+        """
+        Returns the node coordinates on which the agent is currently located
+        """
+        return self.current_node.location
 
     def quit_nav(self):
         """
