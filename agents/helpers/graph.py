@@ -529,17 +529,21 @@ class Graph(object):
         """
         return self.current[agent_id]
 
-    def get_node(self, node):
+    def get_node(self, location):
         """
         Return the node if it exists, otherwise None.
 
         Arguments
         ---------
-        node: (int, int)
+        location: (int, int)
             The coordinates of the requested node.
         """
-        if node in self.nodes.keys():
-            return self.nodes[node]
+        if location in self.nodes:
+            return self.nodes[location]
+        else:
+            self.nodes[location] = Node(location, step=self.get_step())
+            self.add_neighbours(self.nodes[location])
+            return self.nodes[location]
 
     def get_new_agent_locations(self, vision, agent_id):
         """

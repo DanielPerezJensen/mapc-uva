@@ -87,6 +87,12 @@ class Agent(Server):
             action = self.move(direction)
             return action
 
+    def current_info(self, info):
+        if info == 'location':
+            return self.beliefs.get_current(self._user_id).location
+        elif info == 'node':
+            return self.beliefs.get_current(self._user_id)
+
     def quit_nav(self):
         """
         Stops and resets the current navigation.
