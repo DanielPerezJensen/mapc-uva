@@ -3,13 +3,12 @@ from .attacker import Attacker
 from .builder import Builder
 from .defender import Defender
 from .mapper import Mapper
-from .spy import Spy
 
 import json
 import time
 import threading
 
-AGENTS = [Attacker, Builder, Defender, Mapper, Spy]
+AGENTS = [Attacker, Builder, Defender, Mapper]
 
 
 class SuperAgent(*AGENTS, BDIAgent):
