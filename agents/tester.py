@@ -34,7 +34,53 @@ class Tester(Agent, BDIAgent):
                         print("Done with action")
 
     def get_intention(self):
-        return self.test()
+        return self.test3()
+
+    def neighbourhood(self, x, y, depth=1):
+        """
+        Reasoning: Returns all nodes within the neighbourhood of a given
+        coordinate to a given depth, a depth of 2 would return all nodes that
+        are no more than 2 blocks away from the agent.
+
+        args:
+            x: int
+                x coordinate
+            y: int
+                y coordinate
+            depth=1: int
+                depth of neighbourhood
+        """
+        node_list = []
+
+        for i in range(x - depth, x + depth + 1):
+            for j in range(y - depth, y + depth + 1):
+                if (i != x or j != y):
+                    n = self.beliefs.get_node((i, j))
+                    if n:
+                        node_list.append(n)
+
+        return node_list
+
+
+    def get_crowded_goal(self):
+        # print(self.beliefs.things['goals'])
+        max_enemies = 0
+        best_goal = tuple()
+        for goal in self.beliefs.things['goals']:
+            count = 0
+            for neigh in self.neighbourhood(goal[0],goal[1]):
+                if neigh.things:
+                    
+                    if list(neigh.things.values())[-1] == [('entity','B')]:
+                        # print(ok)
+                        count += 1
+                    
+            if count > max_enemies:
+                best_goal = goal
+                max_enemies = count
+            print(count)
+        return best_goal
+            
 
     def test(self):
         """
@@ -58,8 +104,9 @@ class Tester(Agent, BDIAgent):
         return intentions, args, contexts, descriptions, primitive
 
     def test3(self):
+        loc = self.get_hot_goal()
         intentions = [self.nav_to]
-        args = [((3, 3), self._user_id)]
+        args = [(loc, self._user_id)]
         contexts = [tuple()]
         descriptions = ["Primitive"]
         primitive = [True]
