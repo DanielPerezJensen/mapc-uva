@@ -97,7 +97,7 @@ class Agent(Server):
         """
         Returns the node coordinates on which the agent is currently located
         """
-        return self.current_node.location
+        return self.current_node().location
 
     def quit_nav(self):
         """
