@@ -59,7 +59,7 @@ This repository serves as the code hub for our entry into the [multi agent progr
 ### Built With
 
 * [Python3.6](https://www.python.org/)
-* [D* Lite](localhost)
+* [D* Lite](https://github.com/samdjstephens/pydstarlite)
 
 <!-- GETTING STARTED -->
 ## Getting Started
