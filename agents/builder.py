@@ -12,19 +12,30 @@ class Builder(Agent, BDIAgent):
     def get_intention(self):
         if not hasattr(self, 'ready'):
             self.debug()
+        
+        intentions, args, contexts, \
+            descriptions, primitives = [], [], [], [], []
 
-        if len(self.beliefs.tasks):
-            # TODO: do actual task selection
-            task = self.select_task()
-            return self.do_task(task)
 
+        for m, a, c, d, p in self.drain_output_queue():
+            intentions += (list(map(eval, m)))
+            args += a
+            contexts += c
+            descriptions += d
+            primitives += p
+
+        # if len(self.beliefs.tasks):
+        #     # TODO: do actual task selection
+        #     task = self.select_task()
+        #     return self.do_task(task)
+        print(intentions)
+        if intentions:
+            self.pretty_print("adding intentions from output to intention queueu")
+            return (intentions, args, contexts, descriptions, primitives)
         return tuple()
 
     def debug(self):
-        self.beliefs.things['dispensers']['b0'] = [(5, -4)]
-        self.beliefs.things['dispensers']['b1'] = [(6, 9)]
-        self.beliefs.things['taskboards'].append((4, 11))
-        self.beliefs.things['goals'].append((-7, 2))
+        self.beliefs.things['goals'].append((0, 9))
         self.ready = True
 
     def select_task(self):
@@ -33,7 +44,7 @@ class Builder(Agent, BDIAgent):
         """
         return self.beliefs.tasks[0]
 
-    def do_task(self, task):
+    def do_task(self, task, with_agents=[]):
         """
         Returns the intentions to complete a given task.
 
@@ -60,12 +71,12 @@ class Builder(Agent, BDIAgent):
 
         # Create and return the new intentions
         intentions = [self.get_task, self.get_blocks, self.submit_task]
-        args = [(task['name'],), (required,), (task['name'], required)]
+        args = [(task['name'],), (required), (task['name'], required)]
         contexts = [tuple(), tuple(), tuple()]
         descriptions = ["getTask", "getBlocks", "submitTask"]
         primitives = [False, False, False]
 
-        return intentions, args, contexts, descriptions, primitives
+        return (intentions, args, contexts, descriptions, primitives)
 
     def get_task(self, task_name):
         """
@@ -84,14 +95,38 @@ class Builder(Agent, BDIAgent):
                 ["navToTask", "acceptTask"],
                 [True, True])
 
+    def pos_at_goal(self):
+        goal = self._get_nearest_goal()
+        if not goal:
+            return tuple()
+
+        return (
+            [self.nav_to],
+            [(goal, self._user_id)],
+            [tuple()],
+            ["navToGoal"],
+            [True]
+            )
+
     def get_blocks(self, required):
         """
         Return intentions to navigate to the nearest
         required dispensers and request required blocks.
+
+        Arguments
+        ----------
+        required: dict
+            A dictionary block_type as keys and the list of
+            relative locations where the blocks have to be attached.
         """
         intentions, args, contexts, \
             descriptions, primitives = [], [], [], [], []
-        for block_type, required_blocks in required.items():
+
+        sorted_required = sorted(required.items(), key=lambda x: min(x[1],
+                                 key=lambda x: self._manhattan_distance(
+                                 (0, 0), x)))
+        print(sorted_required)
+        for block_type, required_blocks in sorted_required:
             # Find the nearest dispensers.
             dispenser = self._get_nearest_dispenser(block_type)
 
@@ -107,7 +142,7 @@ class Builder(Agent, BDIAgent):
                     [(dispenser,)] * n_blocks
             contexts += [tuple()] + [tuple()] * n_blocks
             descriptions += ["navToDispenser"] + \
-                ["OrientRequestBlock"] * n_blocks
+                ["orientRequestBlock"] * n_blocks
             primitives += [True] + [False] * n_blocks
 
         return intentions, args, contexts, descriptions, primitives
@@ -155,9 +190,37 @@ class Builder(Agent, BDIAgent):
         # a block attached on the side of the dispenser.
         direction = self.beliefs.get_direction(self._user_id, dispenser)
 
+        current_loc = self.beliefs.get_current(self._user_id).location
+        for rel_location in self.beliefs.attached:
+            if (rel_location[0] + current_loc[0],
+                rel_location[1] + current_loc[1]) == dispenser:
+                return ([self.rotate_to_free_spot, self.request, self.attach],
+                        [(rel_location,), (direction,), (direction,)],
+                        [tuple(), tuple(), tuple()],
+                        ["findFreeSpot", "requestBlock", "attachBlock"],
+                        [False, True, True])
+
         return ([self.request, self.attach], [(direction,), (direction,)],
                 [tuple(), tuple()], ["requestBlock", "attachBlock"],
                 [True, True])
+
+    def rotate_to_free_spot(self, rel_location):
+        """
+        Rotate the agent to have a free spot at the given location.
+
+        arguments
+        ---------
+        rel_location: tuple
+            The rotate the free spot to.
+        """
+        free_spot_turns = [self._required_turns(rel_location, x) for x
+                           in [(0, -1), (1, 0), (0, 1), (-1, 0)] if x
+                           not in self.beliefs.attached]
+        args = min(free_spot_turns, key=lambda x: len(x))
+        n_turns = len(args)
+
+        return (n_turns * [self.rotate], args, n_turns * [tuple()],
+                n_turns * ["rotateToFreeSpot"], n_turns * [True])
 
     # HELPER FUNCTIONS #
 
@@ -192,7 +255,7 @@ class Builder(Agent, BDIAgent):
                    np.array(rel_to[::-1])):
                 return [('cw',)]
             else:
-                return [('ccw')]
+                return [('ccw',)]
 
     @staticmethod
     def _required_blocks(task):

@@ -11,7 +11,7 @@ class Strategist(Server):
     The strategist agent uses game information to decide which agent plays
     what role.
     """
-    def __init__(self, user, queue, print_json=False):
+    def __init__(self, user, team_size, print_json=False):
         """
         Initialize the stratagist as a child of the server. Add an input_queue,
         which is used for task from the agents to the strategist, and an
@@ -24,15 +24,20 @@ class Strategist(Server):
             The username of the agent.
         pw: str
             The password of the agent.
-        queue: (Queue, Queue)
-            A tuple containing both the input and output queue. The size of
-            both queues is equal the the number of agents playing.
+        team_size: int
+            The size of the team of agents.
         print_json: bool
             If the communication jsons should be printed.
         """
         super().__init__(user, print_json)
-        self.input_queue = queue[0]
-        self.output_queue = queue[1]
+
+        # The input queue is used to send requests from the agents to
+        # the strategist. The output queue for the other way around.
+        self.input_queue = Queue(maxsize=team_size)
+        self.output_queue = [Queue()] * team_size
+        self.team_size = team_size
+        self.working_on_tasks = {}
+
         print(f'\033[1;34m{self._user}\033[0;0m running')
 
     def run(self):
@@ -44,15 +49,15 @@ class Strategist(Server):
             task = self.peek_queue()
             if task == 'update':
                 if self.input_queue.full():
-                    print(f'Number of graphs: {self.get_number_graphs()}')
+                    # print(f'Number of graphs: {self.get_number_graphs()}')
                     x = self.get_agent(1).beliefs
-                    print(f'Width: {x.width}\nHeight: {x.height}')
+                    # print(f'Width: {x.width}\nHeight: {x.height}')
                     while not self.input_queue.empty():
                         task, agent = self.input_queue.get()
                         self.input_queue.task_done()
 
             elif task == 'print':
-                print(agent.name)
+                # print(agent.name)
                 self.input_queue.task_done()
 
             elif task == 'merge':
@@ -61,16 +66,49 @@ class Strategist(Server):
                 self.merge_agent_graphs(agent, potential_agents)
                 self.input_queue.task_done()
 
+            self.multi_build(list(range(1, self.team_size)))
+            print([list(queue.queue) for queue in self.output_queue])
+
+    def multi_build(self, agents):
+        """
+        Builds a construct with multiple agents.
+
+        Arguments
+        ---------
+        agents: list
+            List of agent ids. These agents will build the construct.
+        """
+        if len(agents) < 2:
+            return
+
+        for t in self.get_agent(1).beliefs.tasks:
+            if t not in self.working_on_tasks:
+                task = t
+                self.working_on_tasks[t] = agents
+                break
+
+        # if self.get_agent(1).beliefs.tasks:
+        #     task = self.get_agent(1).beliefs.tasks[0]
+
+        if task:
+            # TODO: assign most optimal agents
+            main_agent_id = agents[0]
+
+            self.output_queue[main_agent_id - 1].put(
+                (['self.get_task', 'self.pos_at_goal'],
+                 [(task['name'],), tuple()],
+                 [tuple(), tuple()],
+                 ["getTask", "positionAtGoal"],
+                 [False, False]))
+
     def peek_queue(self):
         """
         Identify task and return item to queue. Returns the task as a str.
         """
-        if not self.input_queue.empty():
-            task, agent = self.input_queue.get()
-            self.input_queue.task_done()
-            self.input_queue.put((task, agent))
-            return task
-        return ''
+        task, agent = self.input_queue.get()
+        self.input_queue.task_done()
+        self.input_queue.put((task, agent))
+        return task
 
     def identifying_agents(self, main_agent, agent_name=False):
         """

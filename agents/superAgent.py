@@ -8,6 +8,7 @@ from .spy import Spy
 import json
 import time
 import threading
+from queue import Empty as queue_empty
 
 AGENTS = [Attacker, Builder, Defender, Mapper, Spy]
 
@@ -29,7 +30,7 @@ class SuperAgent(*AGENTS, BDIAgent):
                       if agent.name == 'Strategist'][0]
         if strategist:
             self.input_queue = strategist.input_queue
-            self.output_queue = strategist.output_queue
+            self.output_queue = strategist.output_queue[self._user_id - 1]
         else:
             print('Agents play without the strategist.')
 
@@ -59,7 +60,7 @@ class SuperAgent(*AGENTS, BDIAgent):
 
                     # TODO: Listen to strategist thread for role
                     # TODO: Set role as chosen by strategist
-                    agent_type = AGENTS[3]
+                    agent_type = AGENTS[1]
 
                     # # Read last action if it randomly failed
                     if msg['content']['percept']['lastActionResult'] == \
@@ -76,8 +77,8 @@ class SuperAgent(*AGENTS, BDIAgent):
                         # Get intention from agent_type
                         intention_addition = agent_type.get_intention(self)
 
+                        # self.pretty_print(intention_addition)
                         if intention_addition:
-                            print("got intention")
                             self.add_intention(*intention_addition)
 
                     request_id = self._get_request_id(msg)
@@ -109,3 +110,10 @@ class SuperAgent(*AGENTS, BDIAgent):
                     self.close_socket()
                 else:
                     print(f"Unknown message from the server: {msg['type']}")
+
+    def drain_output_queue(self):
+        while True:
+            try:
+                yield self.output_queue.get_nowait()
+            except queue_empty:  # on python 2 use Queue.Empty
+                break

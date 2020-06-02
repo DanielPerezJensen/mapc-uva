@@ -46,6 +46,8 @@ class Agent(Server):
             x and y coordinates of the goal location.
         agent_id: int
             id of the agent.
+        new_obs: list
+            A list of the new observations.
         adjacent: bool
             If True, navigates to a block next to the goal location,
             e.g. for dispensers, taskboards etc.
@@ -86,18 +88,6 @@ class Agent(Server):
             # multiple moves)
             action = self.move(direction)
             return action
-
-    def current_node(self):
-        """
-        Returns the node object on which the agent is currently located
-        """
-        return self.beliefs.get_current(self._user_id)
-
-    def current_location(self):
-        """
-        Returns the node coordinates on which the agent is currently located
-        """
-        return self.current_node().location
 
     def quit_nav(self):
         """
