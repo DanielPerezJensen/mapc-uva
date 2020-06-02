@@ -420,7 +420,20 @@ class DStarLite(object):
     def heuristic(self, a, b):
         (x1, y1) = a
         (x2, y2) = b
-        return abs(x1 - x2) + abs(y1 - y2)
+
+        min_x = abs(x1 - x2)
+        if self.beliefs.width:
+            other_x = self.beliefs.width - min_x
+            if other_x < min_x:
+                min_x = other_x
+
+        min_y = abs(y1 - y2)
+        if self.beliefs.height:
+            other_y = self.beliefs.height - min_y
+            if other_y < min_y:
+                min_y = other_y
+
+        return min_x + min_y
 
     def calculate_key(self, node):
         g_rhs = min([self.g(node), self.rhs(node)])
