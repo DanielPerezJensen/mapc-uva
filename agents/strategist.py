@@ -34,7 +34,7 @@ class Strategist(Server):
         # The input queue is used to send requests from the agents to
         # the strategist. The output queue for the other way around.
         self.input_queue = Queue(maxsize=team_size)
-        self.output_queue = [Queue()] * team_size
+        self.output_queue = [Queue() for _ in range(team_size)]
         self.team_size = team_size
         self.working_on_tasks = {}
 
@@ -66,8 +66,7 @@ class Strategist(Server):
                 self.merge_agent_graphs(agent, potential_agents)
                 self.input_queue.task_done()
 
-            self.multi_build(list(range(1, self.team_size)))
-            print([list(queue.queue) for queue in self.output_queue])
+            self.multi_build(list(range(1, self.team_size+1)))
 
     def multi_build(self, agents):
         """
@@ -81,10 +80,11 @@ class Strategist(Server):
         if len(agents) < 2:
             return
 
+        task = None
         for t in self.get_agent(1).beliefs.tasks:
-            if t not in self.working_on_tasks:
+            if t['name'] not in self.working_on_tasks:
                 task = t
-                self.working_on_tasks[t] = agents
+                self.working_on_tasks[t['name']] = agents
                 break
 
         # if self.get_agent(1).beliefs.tasks:
@@ -92,7 +92,9 @@ class Strategist(Server):
 
         if task:
             # TODO: assign most optimal agents
-            main_agent_id = agents[0]
+            main_agent_id = 2
+
+            print(self.output_queue)
 
             self.output_queue[main_agent_id - 1].put(
                 (['self.get_task', 'self.pos_at_goal'],
@@ -100,6 +102,13 @@ class Strategist(Server):
                  [tuple(), tuple()],
                  ["getTask", "positionAtGoal"],
                  [False, False]))
+
+            self.output_queue[0].put(
+                (['self.get_block'],
+                 [('b0',)],
+                 [tuple()],
+                 ["getBlock"],
+                 [False]))
 
     def peek_queue(self):
         """

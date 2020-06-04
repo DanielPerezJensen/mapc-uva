@@ -49,6 +49,7 @@ class BDIAgent():
                 a non-primitive intention that must be reduced
         """
         method, args, _, _, _ = intention
+
         methods, args, contexts, descriptions, primitives = method(*args)
 
         reduced_additions = [self.Template(m, a, c, d, p) for m, a, c, d, p

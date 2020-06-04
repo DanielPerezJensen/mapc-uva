@@ -16,7 +16,6 @@ class Builder(Agent, BDIAgent):
         intentions, args, contexts, \
             descriptions, primitives = [], [], [], [], []
 
-
         for m, a, c, d, p in self.drain_output_queue():
             intentions += (list(map(eval, m)))
             args += a
@@ -28,14 +27,13 @@ class Builder(Agent, BDIAgent):
         #     # TODO: do actual task selection
         #     task = self.select_task()
         #     return self.do_task(task)
-        print(intentions)
+
         if intentions:
-            self.pretty_print("adding intentions from output to intention queueu")
             return (intentions, args, contexts, descriptions, primitives)
         return tuple()
 
     def debug(self):
-        self.beliefs.things['goals'].append((0, 9))
+        self.beliefs.things['goals'].append((0, -3))
         self.ready = True
 
     def select_task(self):
@@ -108,6 +106,25 @@ class Builder(Agent, BDIAgent):
             [True]
             )
 
+    def get_block(self, block_type):
+        dispenser = self._get_nearest_dispenser(block_type)
+
+        if not dispenser:
+            intentions = [self.nav_to, self.get_block]
+            args = [((3,-2), self._user_id, False), (block_type,)]
+            contexts = [tuple(), tuple()]
+            descriptions = ["navToDispenser", "getBlock"]
+            primitives = [True, False]
+
+        else:
+            intentions = [self.nav_to, self.orient_and_request]
+            args = [(dispenser, self._user_id, True), (dispenser,)]
+            contexts = [tuple(), tuple()]
+            descriptions = ["navToDispenser", "orientRequestBlock"]
+            primitives = [True, False]
+
+        return intentions, args, contexts, descriptions, primitives
+
     def get_blocks(self, required):
         """
         Return intentions to navigate to the nearest
@@ -125,7 +142,7 @@ class Builder(Agent, BDIAgent):
         sorted_required = sorted(required.items(), key=lambda x: min(x[1],
                                  key=lambda x: self._manhattan_distance(
                                  (0, 0), x)))
-        print(sorted_required)
+
         for block_type, required_blocks in sorted_required:
             # Find the nearest dispensers.
             dispenser = self._get_nearest_dispenser(block_type)
