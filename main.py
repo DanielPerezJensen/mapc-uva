@@ -18,7 +18,7 @@ def main():
         strategist.start()
 
         for i in range(1, team_size + 1):
-            a_list.append(SuperAgent(f"agentA{i}", "1", print_queue=False))
+            a_list.append(SuperAgent(f"agentA{i}", "1", print_queue=True))
             a_list[-1].start()
 
 

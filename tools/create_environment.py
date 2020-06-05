@@ -41,7 +41,7 @@ def main():
 
     # TODO: Add tasks and steps into customMap.txt and parse it nicely
     # tasks = {'task1': (100, [(1, 0, 'b0')]), 'task2': (150, [(0, 1, 'b1')])}
-    tasks = {'complexTask1': (150, [(0, 1, 'b0'), (-1, 1, 'b0')])}
+    tasks = {'complexTask1': (150, [(0, 1, 'b0')])}
     steps = 300
     fast_mode = True
     #########################

@@ -50,15 +50,18 @@ class BDIAgent():
         """
         method, args, _, _, _ = intention
 
-        methods, args, contexts, descriptions, primitives = method(*args)
+        arguments = method(*args)
 
-        reduced_additions = [self.Template(m, a, c, d, p) for m, a, c, d, p
-                             in zip(methods, args, contexts,
-                                    descriptions, primitives)]
+        if arguments:
+            methods, args, contexts, descriptions, primitives = arguments
 
-        # Reverse the intentions because extendleft reverses the intentions
-        reduced_additions.reverse()
-        self.intention_queue.extendleft(reduced_additions)
+            reduced_additions = [self.Template(m, a, c, d, p) for m, a, c, d, p
+                                 in zip(methods, args, contexts,
+                                        descriptions, primitives)]
+
+            # Reverse the intentions because extendleft reverses the intentions
+            reduced_additions.reverse()
+            self.intention_queue.extendleft(reduced_additions)
 
     def execute_intention(self):
         """
@@ -85,3 +88,11 @@ class BDIAgent():
         else:
             self.last_intention = None
             return None
+
+    def update_coordinates(self, offset):
+        for i, intention in enumerate(self.intention_queue):
+            if intention[0].__name__ == "nav_to":
+                old_goal = intention[1][0]
+                intention[1][0] = \
+                    (old_goal[0] + offset[0], old_goal[1] + offset[1])
+                self.intention_queue[i] = intention

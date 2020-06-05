@@ -10,18 +10,20 @@ class Builder(Agent, BDIAgent):
         BDIAgent.__init__(self)
 
     def get_intention(self):
-        if not hasattr(self, 'ready'):
-            self.debug()
+        # if not hasattr(self, 'ready'):
+        #     self.debug()
         
         intentions, args, contexts, \
             descriptions, primitives = [], [], [], [], []
 
-        for m, a, c, d, p in self.drain_output_queue():
-            intentions += (list(map(eval, m)))
-            args += a
-            contexts += c
-            descriptions += d
-            primitives += p
+        for var in self.drain_output_queue():
+            if var[0] == 'mergedBeliefs':
+                continue
+            intentions += (list(map(eval, var[0])))
+            args += var[1]
+            contexts += var[2]
+            descriptions += var[3]
+            primitives += var[4]
 
         # if len(self.beliefs.tasks):
         #     # TODO: do actual task selection
@@ -33,7 +35,14 @@ class Builder(Agent, BDIAgent):
         return tuple()
 
     def debug(self):
-        self.beliefs.things['goals'].append((0, -3))
+        if self._user_id == 1:
+            self.beliefs.things['goals'].append((2, -6))
+            self.beliefs.things['taskboards'].append((2, 3))
+            self.beliefs.things['dispensers']['b0'] = [(-7, -1)]
+        if self._user_id == 2:
+            self.beliefs.things['goals'].append((-2, -6))
+            self.beliefs.things['taskboards'].append((-2, 3))
+            self.beliefs.things['dispensers']['b0'] = [(-11, -1)]
         self.ready = True
 
     def select_task(self):
@@ -109,19 +118,14 @@ class Builder(Agent, BDIAgent):
     def get_block(self, block_type):
         dispenser = self._get_nearest_dispenser(block_type)
 
-        if not dispenser:
-            intentions = [self.nav_to, self.get_block]
-            args = [((3,-2), self._user_id, False), (block_type,)]
-            contexts = [tuple(), tuple()]
-            descriptions = ["navToDispenser", "getBlock"]
-            primitives = [True, False]
-
-        else:
+        if dispenser:
             intentions = [self.nav_to, self.orient_and_request]
             args = [(dispenser, self._user_id, True), (dispenser,)]
             contexts = [tuple(), tuple()]
             descriptions = ["navToDispenser", "orientRequestBlock"]
             primitives = [True, False]
+        else:
+            return tuple()
 
         return intentions, args, contexts, descriptions, primitives
 

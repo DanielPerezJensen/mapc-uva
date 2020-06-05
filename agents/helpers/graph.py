@@ -376,15 +376,15 @@ class Graph(object):
                         vision[node]['terrain'] == 'goal':
                     self.things['goals'].append(node)
 
+                self.nodes[node].set_terrain(vision[node]['terrain'], step)
+                self.nodes[node].add_things(step, vision[node]['things'])
+
                 known_things = self.nodes[node].get_things(step)
 
                 for seen_thing in vision[node]['things']:
                     if seen_thing[0] in ['dispenser', 'taskboard'] and \
                             seen_thing not in known_things:
                         self.add_thing(seen_thing, node)
-
-                self.nodes[node].set_terrain(vision[node]['terrain'], step)
-                self.nodes[node].add_things(step, vision[node]['things'])
 
         self.new_obs = {'obstacles': new_obstacles, 'empty': new_empty,
                         'agents': self.get_new_agent_locations(vision,

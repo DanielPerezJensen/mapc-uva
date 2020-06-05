@@ -94,8 +94,6 @@ class Strategist(Server):
             # TODO: assign most optimal agents
             main_agent_id = 2
 
-            print(self.output_queue)
-
             self.output_queue[main_agent_id - 1].put(
                 (['self.get_task', 'self.pos_at_goal'],
                  [(task['name'],), tuple()],
@@ -104,8 +102,8 @@ class Strategist(Server):
                  [False, False]))
 
             self.output_queue[0].put(
-                (['self.get_block'],
-                 [('b0',)],
+                (['self.get_blocks', 'self.connect_to_agent'],
+                 [('b0',), ('')],
                  [tuple()],
                  ["getBlock"],
                  [False]))
@@ -216,6 +214,11 @@ class Strategist(Server):
             if len(agent) == 1:
                 agent = agent[0]
                 if agent._user_id not in main_agent.beliefs.current.keys():
+                    g1_x, g1_y = main_agent.beliefs \
+                        .get_current(main_agent._user_id).location
+                    g2_x, g2_y = agent.beliefs \
+                        .get_current(agent._user_id).location
+
                     if main_agent._user_id < agent._user_id:
                         new_graph = merge_graphs(main_agent.beliefs,
                                                  main_agent._user_id,
@@ -223,6 +226,15 @@ class Strategist(Server):
                                                  agent._user_id,
                                                  location)
                         print(f'{agent._user} merged with {main_agent._user}')
+
+                        for a in new_graph.current:
+                            if a in agent.beliefs.current:
+                                rx, ry = (g1_x + location[0] - g2_x,
+                                          g1_y + location[0] - g2_y)
+                                self.output_queue[a - 1].put(('mergedBeliefs',
+                                                             (rx, ry)))
+                            self.get_agent(a).beliefs = new_graph
+
                     else:
                         new_graph = merge_graphs(agent.beliefs,
                                                  agent._user_id,
@@ -231,8 +243,13 @@ class Strategist(Server):
                                                  (-location[0], -location[1]))
                         print(f'{main_agent._user} merged with {agent._user}')
 
-                    for agent in new_graph.current:
-                        self.get_agent(agent).beliefs = new_graph
+                        for a in new_graph.current:
+                            if a in main_agent.beliefs.current:
+                                rx, ry = (g2_x + location[0] - g1_x,
+                                          g2_y + location[0] - g1_y)
+                                self.output_queue[a - 1].put(('mergedBeliefs',
+                                                             (rx, ry)))
+                            self.get_agent(a).beliefs = new_graph
 
                 else:
                     self.calculate_dimensions(main_agent, agent, location)

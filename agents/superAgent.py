@@ -22,6 +22,11 @@ class SuperAgent(*AGENTS, BDIAgent):
         self._timer = timer
         self._print_queue = print_queue
 
+        if self._user_id == 1:
+            self.beliefs.things['goals'].append((2, -6))
+            self.beliefs.things['taskboards'].append((2, 3))
+            self.beliefs.things['dispensers']['b0'] = [(-3, -1)]
+
     def run(self):
         """
         Function that runs the agents.
@@ -58,6 +63,17 @@ class SuperAgent(*AGENTS, BDIAgent):
 
                         self.input_queue.put(('merge', self))
 
+                    self.pretty_print("taskboards:" + str(self.beliefs.things['taskboards']))
+                    if self._user_id == 2:
+                        pass
+                        # self.beliefs.print_local(self._user_id, all=True)
+
+                    if not self.output_queue.empty:
+                        for elem in self.output_queue.queue:
+                            if elem[0] == 'mergedBeliefs':
+                                self.update_coordinates(elem[1])
+                                break
+                            
                     # TODO: Listen to strategist thread for role
                     # TODO: Set role as chosen by strategist
                     agent_type = AGENTS[1]
