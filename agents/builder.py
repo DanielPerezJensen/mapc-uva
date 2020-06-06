@@ -78,7 +78,7 @@ class Builder(Agent, BDIAgent):
 
         # Create and return the new intentions
         intentions = [self.get_task, self.get_blocks, self.submit_task]
-        args = [(task['name'],), (required), (task['name'], required)]
+        args = [(task['name'],), required, (task['name'], required)]
         contexts = [tuple(), tuple(), tuple()]
         descriptions = ["getTask", "getBlocks", "submitTask"]
         primitives = [False, False, False]
@@ -102,11 +102,12 @@ class Builder(Agent, BDIAgent):
                 ["navToTask", "acceptTask"],
                 [True, True])
 
-    def pos_at_goal(self):
-        goal = self._get_nearest_goal()
+    def pos_at_goal(self, comm_queue):
+        goal = comm_queue.get(timeout=3)
         if not goal:
             return tuple()
 
+        comm_queue.put(goal)
         return (
             [self.nav_to],
             [(goal, self._user_id)],
@@ -167,6 +168,26 @@ class Builder(Agent, BDIAgent):
             primitives += [True] + [False] * n_blocks
 
         return intentions, args, contexts, descriptions, primitives
+
+    def connect_to_agent(self, comm_queue, attach_locations):
+        goal = comm_queue.get(timeout=3)
+        if not goal:
+            return tuple()
+        comm_queue.put(goal)
+
+        for location in attach_locations:
+            current_attach_location = (goal[0] + location[0], goal[1], location[1])
+
+
+
+    def broadcast_goal(self, comm_queue):
+        task_board = self._get_nearest_taskboard()
+
+        if self.beliefs.things['goals']:
+            goal = min(self.beliefs.things['goals'],
+                       key=lambda x: self._manhattan_distance(x, task_board))
+            comm_queue.put(goal)
+
 
     def submit_task(self, task_name, pattern):
         """

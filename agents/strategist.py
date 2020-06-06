@@ -3,6 +3,7 @@ from .helpers.graph import Graph
 from .helpers.graph import merge_graphs
 
 from queue import Queue
+from collections import defaultdict
 import threading
 
 
@@ -87,26 +88,31 @@ class Strategist(Server):
                 self.working_on_tasks[t['name']] = agents
                 break
 
-        # if self.get_agent(1).beliefs.tasks:
-        #     task = self.get_agent(1).beliefs.tasks[0]
-
         if task:
             # TODO: assign most optimal agents
-            main_agent_id = 2
+            main_agent_id = 1
+
+            comm_queue = Queue()
+
+            required = defaultdict(list)
+            for requirement in task['requirements']:
+                required[requirement['type']].append(
+                    (requirement['x'], requirement['y']))
 
             self.output_queue[main_agent_id - 1].put(
-                (['self.get_task', 'self.pos_at_goal'],
-                 [(task['name'],), tuple()],
-                 [tuple(), tuple()],
-                 ["getTask", "positionAtGoal"],
-                 [False, False]))
+                (['self.broadcast_goal', 'self.get_task', 'self.pos_at_goal'],
+                 [(comm_queue,), (task['name'],), (comm_queue,)],
+                 [tuple(), tuple(), tuple()],
+                 ["broadcastGoal", "getTask", "positionAtGoal"],
+                 [True, False, False]))
 
-            self.output_queue[0].put(
-                (['self.get_blocks', 'self.connect_to_agent'],
-                 [('b0',), ('')],
-                 [tuple()],
-                 ["getBlock"],
-                 [False]))
+            for index, block_type, positions in enumerate(required.items()):
+                self.output_queue[index % (len(agents) - 1) + 1].put(
+                    (['self.get_blocks', 'self.connect_to_agent'],
+                     [({block_type: positions},), (comm_queue, positions)],
+                     [tuple(), tuple()],
+                     ["getBlocks", "connectBlockToAgent"],
+                     [False, False]))
 
     def peek_queue(self):
         """

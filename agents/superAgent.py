@@ -97,8 +97,6 @@ class SuperAgent(*AGENTS, BDIAgent):
                         if intention_addition:
                             self.add_intention(*intention_addition)
 
-                    request_id = self._get_request_id(msg)
-
                     action = self.execute_intention()
 
                     if action:
