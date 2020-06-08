@@ -4,11 +4,17 @@ import random
 
 class Attacker(Agent):
 
+    def __init__(self, user, pw, print_json=False):
+        """
+        """
+        super().__init__(user, pw, print_json)
+        self.local_random = random.Random()
+        self.local_random.seed(int(user[6:] * 1024))
+
     def get_intention(self):
         """
         Gets intentions of this type of agent.
         """
-
         percept_area = self.percept_area()
         classifications = self.classify_nodes(percept_area)
 
@@ -30,7 +36,7 @@ class Attacker(Agent):
         Intention: Moves the agent randomly in a given direction
         """
         intentions = [self.move]
-        args = [(random.choice(['n', 'e', 's', 'w']),)]
+        args = [(self.local_random.choice(['n', 'e', 's', 'w']),)]
         contexts = [tuple()]
         descriptions = ["moveRandomly"]
         primitives = [True]
@@ -41,7 +47,10 @@ class Attacker(Agent):
         """
         Intention: Moves the agent towards a node one step at a time
         """
-        rel_direction = self.get_relative_direction(self.beliefs.current[self._user_id].location, node.location)
+        current_location = self.beliefs.current_location()
+
+        rel_direction = self.get_relative_direction(current_location,
+                                                    node.location)
 
         intentions = [self.move]
         args = [(rel_direction,)]
@@ -58,7 +67,7 @@ class Attacker(Agent):
         """
         intentions = [self.clear] * 3
         args = [(x, y)] * 3
-        contexts = [tuple()] * 3
+        contexts = [((x, y), ('entity', 'B'))] * 3
         descriptions = ["clear1", "clear2", "clear3"]
         primitives = [True, True, True]
 
@@ -115,7 +124,7 @@ class Attacker(Agent):
 
         x, y = node.location
 
-        for node in self.neighbourhood(x, y):
+        for node in self.neighbourhood(x, y, depth=2):
             things = node.get_things(self.beliefs.step)
             for itemtype, item in things:
                 if itemtype == "block":
