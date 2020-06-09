@@ -59,7 +59,7 @@ class SuperAgent(*AGENTS, BDIAgent):
 
                     # TODO: Listen to strategist thread for role
                     # TODO: Set role as chosen by strategist
-                    agent_type = AGENTS[3]
+                    agent_type = AGENTS[0]
 
                     # # Read last action if it randomly failed
                     if msg['content']['percept']['lastActionResult'] == \
@@ -72,19 +72,25 @@ class SuperAgent(*AGENTS, BDIAgent):
                                            for x in self.intention_queue])
 
                     # If intention queue is empty, add intention (temporary)
+                    # TODO: Check if it can be removed
                     if not self.intention_queue:
                         # Get intention from agent_type
                         intention_addition = agent_type.get_intention(self)
 
                         if intention_addition:
-                            print("got intention")
+                            print("Got intention")
                             self.add_intention(*intention_addition)
+
+                    # Check if the first intention should be dropped
+                    dropped = self.drop_intention(self.beliefs)
+
+                    print("Dropped:", dropped)
 
                     request_id = self._get_request_id(msg)
 
                     action = self.execute_intention()
 
-                    if action:
+                    if action and not dropped:
                         self.send_request(self._add_request_id(action,
                                           request_id))
                     else:

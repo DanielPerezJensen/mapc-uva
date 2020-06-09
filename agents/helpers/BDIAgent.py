@@ -33,11 +33,23 @@ class BDIAgent():
     def add_last_intention(self):
         self.intention_queue.appendleft(self.last_intention)
 
-    def drop_intention(self):
-        for intention in self.intention_queue:
-            # TODO: drop impossible intentions, an intention is impossible if
-            # it's context is no longer believed
-            pass
+    def drop_intention(self, beliefs):
+        """
+        Checks next intention using context, if context is no longer believed
+        drop intention and return True
+        """
+        if self.intention_queue:
+            intention = self.intention_queue[0]
+            _, _, context, _, _ = intention
+
+            if context:
+                crd, thing = context
+                print(beliefs.get_node(crd).get_things(beliefs.step))
+                if thing not in beliefs.get_node(crd).get_things(beliefs.step):
+                    self.intention_queue.popleft()
+                    return True
+
+        return False
 
     def reduce_intention(self, intention):
         """
@@ -68,6 +80,7 @@ class BDIAgent():
             self.last_intention = self.intention_queue.popleft()
 
             method, args, context, description, primitive = self.last_intention
+
             if not primitive:
                 self.reduce_intention(self.last_intention)
                 return self.execute_intention()
