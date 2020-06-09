@@ -85,15 +85,33 @@ class Builder(Agent, BDIAgent):
 
         return (intentions, args, contexts, descriptions, primitives)
 
-    def get_task(self, task_name):
+    def get_task(self, task_name, comm_queue=None):
         """
         Return intentions to navigate to the nearest
         taskboard and accept the given task.
+
+        Arguments
+        ----------
+        task_name: str
+            The name of the task that needs to be accepted.
+        comm_queue: object
+            A queue object in which to communicate the goal location of
+            the agent.
         """
         # Find the nearest taskboard.
         taskboard = self._get_nearest_taskboard()
         if not taskboard:
             return tuple()
+
+        if self.beliefs.things['goals']:
+            self.goal = min(self.beliefs.things['goals'],
+                            key=lambda x:
+                            self._manhattan_distance(x, task_board))
+        else:
+            self.goal = None
+
+        if comm_queue:
+            comm_queue.put(('goal_loc', goal))
 
         # Return new intentions.
         return ([self.nav_to, self.accept],
@@ -103,18 +121,31 @@ class Builder(Agent, BDIAgent):
                 [True, True])
 
     def pos_at_goal(self, comm_queue):
-        goal = comm_queue.get(timeout=3)
-        if not goal:
-            return tuple()
+        if not self.goal:
+            if self.beliefs.things['goals']:
+                self.goal = min(self.beliefs.things['goals'],
+                                key=lambda x:
+                                self._manhattan_distance(x,
+                                self.beliefs.get_current(self._user_id)))
+                if comm_queue:
+                    comm_queue.put(('goal_loc', goal))
+            else:
+                return tuple()
 
-        comm_queue.put(goal)
         return (
-            [self.nav_to],
-            [(goal, self._user_id)],
-            [tuple()],
-            ["navToGoal"],
-            [True]
+            [self.nav_to, self.broadcast_msg],
+            [(goal, self._user_id), (comm_queue, ('0 ready',))],
+            [tuple(), tuple()],
+            ["navToGoal", "communicateAtGoal"],
+            [True, False]
             )
+
+    def broadcast_msg(self, comm_queue, msg):
+        """
+        Broadcast a given message to the given communication queue. 
+        """
+        comm_queue.put(msg)
+        return [self.skip], [tuple()], [tuple()], ["communicateAtGoal"], [True]
 
     def get_block(self, block_type):
         dispenser = self._get_nearest_dispenser(block_type)
@@ -169,25 +200,122 @@ class Builder(Agent, BDIAgent):
 
         return intentions, args, contexts, descriptions, primitives
 
-    def connect_to_agent(self, comm_queue, attach_locations):
-        goal = comm_queue.get(timeout=3)
-        if not goal:
-            return tuple()
-        comm_queue.put(goal)
+    def connect_to_agent(self, comm_queue, rel_attach_locs):
+        """
+        Connect the attached blocks to the given attached coordinates.
+        """
+        attach_locs = sorted([(self.goal[0] + loc[0], self.goal[1] + loc[1])
+                             for loc in rel_attach_locs], key=lambda x:
+                             self._manhattan_distance(x, self.goal))
 
-        for location in attach_locations:
-            current_attach_location = (goal[0] + location[0], goal[1], location[1])
+        rel_surr_nodes = [(0, 1), (1, 0), (0, -1),  (-1, 0)]
 
+        intentions, args, contexts, descriptions, primitives = ([], [], [],
+                                                                [], [])
 
+        curr_loc = self.beliefs.get_current(self._user_id)
 
-    def broadcast_goal(self, comm_queue):
-        task_board = self._get_nearest_taskboard()
+        for attach_loc in attach_locs:
+            nav_loc = attach_loc
 
-        if self.beliefs.things['goals']:
-            goal = min(self.beliefs.things['goals'],
-                       key=lambda x: self._manhattan_distance(x, task_board))
-            comm_queue.put(goal)
+            for rel_surr in rel_surr_nodes:
+                surr_node = (attach_loc[0] + rel_surr[0],
+                             attach_loc[1] + rel_surr[1])
+                if surr_node in self.beliefs.nodes and \
+                        self.beliefs.nodes[surr_node]._is_things(
+                        self.beliefs.step):
+                    nav_loc[0] -= rel_surr[0]
+                    nav_loc[1] -= rel_surr[1]
+            intentions += [self.nav_to, self.turn_and_connect]
+            args += [(nav_loc, self._user_id), 
+                     (nav_loc[0] - curr_loc[0], nav_loc[1] - curr_loc[1])]
+            contexts += [tuple()]
+            descriptions += ["navToAttachLocation"]
+            primitives += [True]
 
+        return intentions, args, contexts, descriptions, primitives
+
+    def turn_and_connect(self, rel_attach_loc):
+        intentions, args, contexts, descriptions, primitives = ([], [], [],
+                                                                [], [])
+        # compute turns
+        rel_from = min(self.beliefs.attached[self._user_id], key=lambda x:
+                       self._manhattan_distance(x, rel_attach_loc))
+        rel_to = min([(1, 0), (0, 1), (-1, 0), (0, -1)], key=lambda x:
+                     self._manhattan_distance(x, rel_attach_loc))
+        turns = self._required_turns(rel_from, rel_to)
+
+        # compute moves
+        moves = self._required_moves(rel_to, rel_attach_loc)
+
+        for new_args, func, desc in \
+                [(turns, self.rotate, "turningBlockToAttachLoc"), 
+                 (moves, self.move, "movingToAttachLoc")]:
+            n_args = len(args)
+            args += new_args
+            intentions += n_args * [func]
+            contexts += n_args * [tuple()]
+            descriptions += n_args * [desc]
+            primitives += n_args * [True]
+
+        return intentions, args, contexts, descriptions, primitives
+
+    def prepare_build(self, comm_queue, queue_index, attach_locs):
+        local_queue = []
+        msg = comm_queue.get(timeout=3)
+
+        while msg and msg[0] != 'goal_loc':
+            local_queue.append(msg)
+            msg = comm_queue.get(timeout=3)
+
+        for return_msg in local_queue:
+            comm_queue.put(return_msg)
+
+        if not msg:
+            return ([self.skip, self.prepare_build],
+                    [tuple(), (comm_queue, queue_index, attach_locs)],
+                    [tuple(), tuple()],
+                    ["waitForGoalMsg", "prepareForBuild"],
+                    [True, False])
+
+        local_queue.put(msg)
+
+        rel_prep_loc = [(-4, -4), (4, -4), (-4, 4), (4, 4)][queue_index]
+
+        prep_loc = msg[1][0] + rel_prep_loc[0], msg[1][1] + rel_prep_loc[1]
+
+        self.goal = msg[1]
+
+        return ([self.nav_to, self.wait_for_turn],
+                [(prep_loc, self._user_id),
+                 (comm_queue, queue_index, attach_locs)],
+                [tuple(), tuple()],
+                ["navToGoal", "waitForTurn"],
+                [True, False])
+
+    def wait_for_turn(self, comm_queue, turn, attach_locs):
+        """
+        Wait until ready for building.
+        """
+        local_queue = []
+        msg = comm_queue.get(timeout=3)
+
+        while msg and not msg[0][0] == str(turn):
+            local_queue.append(msg)
+            msg = comm_queue.get(timeout=3)
+
+        for return_msg in local_queue:
+            comm_queue.put(return_msg)
+
+        if not msg:
+            return ([self.skip, self.wait_for_turn],
+                    [tuple(), (comm_queue, turn, attach_locs)],
+                    [tuple(), tuple()],
+                    ["skipThisStep", "waitForTurn"],
+                    [True, False])
+
+        return ([self.connect_to_agent], [(comm_queue, rel_attach_locs,)],
+                [tuple()], ["connectBlocksToAgent"], [False])
 
     def submit_task(self, task_name, pattern):
         """
@@ -212,7 +340,7 @@ class Builder(Agent, BDIAgent):
         """
         # TODO: make it work for more than one attached block
 
-        turns = self._required_turns(self.beliefs.attached[0],
+        turns = self._required_turns(self.beliefs.attached[self._user_id][0],
                                      list(pattern.values())[0][0])
         n_turns = len(turns)
         return (
@@ -233,9 +361,9 @@ class Builder(Agent, BDIAgent):
         direction = self.beliefs.get_direction(self._user_id, dispenser)
 
         current_loc = self.beliefs.get_current(self._user_id).location
-        for rel_location in self.beliefs.attached:
+        for rel_location in self.beliefs.attached[self._user_id]:
             if (rel_location[0] + current_loc[0],
-                rel_location[1] + current_loc[1]) == dispenser:
+                    rel_location[1] + current_loc[1]) == dispenser:
                 return ([self.rotate_to_free_spot, self.request, self.attach],
                         [(rel_location,), (direction,), (direction,)],
                         [tuple(), tuple(), tuple()],
@@ -253,11 +381,11 @@ class Builder(Agent, BDIAgent):
         arguments
         ---------
         rel_location: tuple
-            The rotate the free spot to.
+            The relative location to rotate the free spot to.
         """
         free_spot_turns = [self._required_turns(rel_location, x) for x
                            in [(0, -1), (1, 0), (0, 1), (-1, 0)] if x
-                           not in self.beliefs.attached]
+                           not in self.beliefs.attached[self._user_id]]
         args = min(free_spot_turns, key=lambda x: len(x))
         n_turns = len(args)
 
@@ -306,6 +434,24 @@ class Builder(Agent, BDIAgent):
             required[requirement['type']].append(
                 (requirement['x'], requirement['y']))
         return required
+
+    @staticmethod
+    def _required_moves(from_loc, to_loc):
+        to_loc[0] -= from_loc[0]
+        to_loc[1] -= from_loc[1]
+
+        result = []
+        if to_loc[0] > 0:
+            result += to_loc[0] * [('e',)]
+        elif to_loc[0] < 0:
+            result += to_loc[0] * [('w',)]
+        
+        if to_loc[1] > 0:
+            result += to_loc[1] * [('s',)]
+        elif to_loc[1] < 0:
+            result += to_loc[1] * [('n',)]
+        
+        return result
 
     def _get_nearest_dispenser(self, block_type):
         """

@@ -327,7 +327,8 @@ class DStarLite(object):
 
         # Init the beliefs
         self.beliefs = beliefs
-        self.obstacle_cost = 32 * math.e ** (-0.008 * self.beliefs.energy)
+        self.obstacle_cost = 32 * math.e ** \
+            (-0.008 * self.beliefs.energy[agent_id])
 
         self.back_pointers = {}
         self.G_VALS = {}
@@ -358,7 +359,7 @@ class DStarLite(object):
         curr_loc = self.beliefs.get_current(self.agent_id).location
 
         attached_locs = [(curr_loc[0] + att[0], curr_loc[1] + att[1]) for att
-                         in self.beliefs.attached]
+                         in self.beliefs.attached[self.agent_id]]
 
         for node in [from_node, to_node]:
             if node in self.beliefs.nodes and \
@@ -367,14 +368,15 @@ class DStarLite(object):
                                                        attached_locs):
                 return float('inf')
 
-        if len(self.beliefs.attached):
+        if len(self.beliefs.attached[self.agent_id]):
             if to_node in self.beliefs.nodes and \
                     self.beliefs.nodes[to_node]._is_exp_obstacle():
                 return float('inf')
         else:
             if to_node in self.beliefs.nodes and \
                     self.beliefs.nodes[to_node]._is_obstacle():
-                return 32 * math.e ** (-0.008 * self.beliefs.energy)
+                return 32 * math.e ** \
+                    (-0.008 * self.beliefs.energy[self.agent_id])
 
         return 1
 
@@ -492,16 +494,18 @@ class DStarLite(object):
         """
         # Update observations
         self.beliefs = beliefs
-        self.obstacle_cost = 32 * math.e ** (-0.008 * self.beliefs.energy)
+        self.obstacle_cost = 32 * math.e ** \
+            (-0.008 * self.beliefs.energy[self.agent_id])
         self.position = beliefs.get_current(self.agent_id).location
-        new_obs = [obs for sublist in beliefs.new_obs.values()
+        new_obs = [obs for sublist in beliefs.new_obs[self.agent_id].values()
                    for obs in sublist]
 
         # Update the path if there are new observations
         if new_obs:
             self.Km += self.heuristic(self.last_node, self.position)
             attached_locs = [(self.position[0] + att[0], self.position[1] +
-                             att[1]) for att in self.beliefs.attached]
+                             att[1]) for att
+                             in self.beliefs.attached[self.agent_id]]
             self.update_nodes({node for obs in new_obs
                               for node in self.neighbors(obs)
                               if (node not in self.beliefs.nodes or not

@@ -300,9 +300,9 @@ class Graph(object):
         self.current = {agent_id: self.nodes[(0, 0)]}
         self.things = {'goals': [], 'dispensers': {}, 'taskboards': []}
         self.tasks = {}
-        self.new_obs = {'obstacles': [], 'empty': [], 'agents': []}
-        self.attached = []
-        self.energy = 300
+        self.new_obs = {agent_id: {'obstacles': [], 'empty': [], 'agents': []}}
+        self.attached = {agent_id: []}
+        self.energy = {agent_id: 300}
 
         for node in self.nodes.values():
             x, y = node.location
@@ -386,13 +386,14 @@ class Graph(object):
                             seen_thing not in known_things:
                         self.add_thing(seen_thing, node)
 
-        self.new_obs = {'obstacles': new_obstacles, 'empty': new_empty,
-                        'agents': self.get_new_agent_locations(vision,
-                                                               agent_id)}
+        self.new_obs[agent_id] = {'obstacles': new_obstacles,
+                                  'empty': new_empty,
+                                  'agents': self.get_new_agent_locations(
+                                      vision, agent_id)}
         self.tasks = msg["content"]["percept"]["tasks"]
-        self.attached = [tuple(x) for x in
-                         msg["content"]["percept"]["attached"]]
-        self.energy = msg["content"]["percept"]["energy"]
+        self.attached[agent_id] = [tuple(x) for x in
+                                   msg["content"]["percept"]["attached"]]
+        self.energy[agent_id] = msg["content"]["percept"]["energy"]
 
     def add_thing(self, thing, location):
         """
@@ -804,13 +805,15 @@ class Graph(object):
                     self.things[thing][i] = self.modulate(location)
 
         # Update self.new_obs
-        for obstacle in self.new_obs:
-            for i, location in enumerate(self.new_obs[obstacle]):
-                self.new_obs[obstacle][i] = self.modulate(location)
+        for agent, new_obs in self.new_obs.items():
+            for obstacle, locs in new_obs.items():
+                for i, location in enumerate(locs):
+                    self.new_obs[agent][obstacle][i] = self.modulate(location)
 
         # Update self.attached
-        for i, location in enumerate(self.attached):
-            self.attached[i] = self.modulate(location)
+        for agent, attached in self.attached.items():
+            for i, location in enumerate(attached):
+                self.attached[agent][i] = self.modulate(location)
 
     def print_local(self, agent_id, all=False):
         """
@@ -952,6 +955,25 @@ def merge_graphs(g1, agent1, g2, agent2, offset):
     for agent, location in temp:
         g1.current[agent] = g1.nodes[g1.modulate((location[0] + rx,
                                                   location[1] + ry))]
+
+    # update energy
+    for agent, energy in g2.energy.items():
+        if agent not in g1.energy:
+            g1.energy[agent] = energy
+
+    # update attachments
+    for agent, attachments in g2.attached.items():
+        if agent not in g1.attached:
+            g1.attached[agent] = attachments
+
+    # update new_obs
+    for agent, new_obs in g2.new_obs.items():
+        if agent not in g1.new_obs:
+            for obstacle, g2_locs in new_obs.items():
+                g1_locs = [g1.modulate((loc[0] + rx, loc[1] + ry))
+                           for loc in g2_locs]
+                g1.new_obs[agent][obstacle] = g1_locs
+            g1.new_obs[agent] = new_obs
 
     for thing in g2.things:
         if thing == 'dispensers':

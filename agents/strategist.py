@@ -100,18 +100,19 @@ class Strategist(Server):
                     (requirement['x'], requirement['y']))
 
             self.output_queue[main_agent_id - 1].put(
-                (['self.broadcast_goal', 'self.get_task', 'self.pos_at_goal'],
-                 [(comm_queue,), (task['name'],), (comm_queue,)],
-                 [tuple(), tuple(), tuple()],
-                 ["broadcastGoal", "getTask", "positionAtGoal"],
-                 [True, False, False]))
+                (['self.get_task', 'self.pos_at_goal'],
+                 [(task['name'], comm_queue), (comm_queue,)],
+                 [tuple(), tuple()],
+                 ["getTask", "positionAtGoal"],
+                 [False, False]))
 
-            for index, block_type, positions in enumerate(required.items()):
+            for index, block_type, attach_locs in enumerate(required.items()):
                 self.output_queue[index % (len(agents) - 1) + 1].put(
-                    (['self.get_blocks', 'self.connect_to_agent'],
-                     [({block_type: positions},), (comm_queue, positions)],
+                    (['self.get_blocks', 'self.prepare_build'],
+                     [({block_type: attach_locs},),
+                      (comm_queue, index % 4, attach_locs)],
                      [tuple(), tuple()],
-                     ["getBlocks", "connectBlockToAgent"],
+                     ["getBlocks", "prepareForBuild"],
                      [False, False]))
 
     def peek_queue(self):
