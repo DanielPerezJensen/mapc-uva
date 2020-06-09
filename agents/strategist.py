@@ -44,9 +44,9 @@ class Strategist(Server):
             task = self.peek_queue()
             if task == 'update':
                 if self.input_queue.full():
-                    print(f'Number of graphs: {self.get_number_graphs()}')
-                    x = self.get_agent(1).beliefs
-                    print(f'Width: {x.width}\nHeight: {x.height}')
+                    # print(f'Number of graphs: {self.get_number_graphs()}')
+                    # x = self.get_agent(1).beliefs
+                    # print(f'Width: {x.width}\nHeight: {x.height}')
                     while not self.input_queue.empty():
                         task, agent = self.input_queue.get()
                         self.input_queue.task_done()
@@ -88,6 +88,18 @@ class Strategist(Server):
         potential_agents = {}
         main_local_agents = main_agent.beliefs.\
             get_local_agent_locations(main_agent._user_id)
+
+        # See if it's an agent with who the agent already shares its graph.
+        # Then there is no need for identification.
+        main_current = main_agent.beliefs.\
+            get_current(main_agent._user_id).location
+        for location in main_local_agents:
+            real_location = (main_current[0] + location[0],
+                             main_current[1] + location[1])
+            for agent, current in main_agent.beliefs.current.items():
+                if real_location == current:
+                    potential_agents[location] = [agent]
+                    main_local_agents.remove(location)
 
         for agent in self.get_agents(main_agent.name):
             local_agents = [(-x, -y) for (x, y) in

@@ -529,17 +529,21 @@ class Graph(object):
         """
         return self.current[agent_id]
 
-    def get_node(self, node):
+    def get_node(self, location):
         """
         Return the node if it exists, otherwise None.
 
         Arguments
         ---------
-        node: (int, int)
+        location: (int, int)
             The coordinates of the requested node.
         """
-        if node in self.nodes.keys():
-            return self.nodes[node]
+        if location in self.nodes:
+            return self.nodes[location]
+        else:
+            self.nodes[location] = Node(location, step=self.get_step())
+            self.add_neighbours(self.nodes[location])
+            return self.nodes[location]
 
     def get_new_agent_locations(self, vision, agent_id):
         """
@@ -968,7 +972,7 @@ def merge_graphs(g1, agent1, g2, agent2, offset):
 
 
 if __name__ == '__main__':
-    agent_0_step_0 = json.loads('{\
+    agent_1_step_0 = json.loads('{\
         "type":\
             "request-action",\
         "content":{\
@@ -996,7 +1000,7 @@ if __name__ == '__main__':
                 "energy":300},\
             "deadline":1587299390456}}')
 
-    agent_0_step_1 = json.loads('{\
+    agent_1_step_1 = json.loads('{\
         "type":\
             "request-action",\
         "content":{\
@@ -1080,15 +1084,15 @@ if __name__ == '__main__':
                 "energy":300},\
             "deadline":1587837763855}}')
 
-    graph0 = Graph(0)
-    graph0.update(agent_0_step_0, 0)
-    graph0.update(agent_0_step_1, 0)
+    graph1 = Graph(1)
+    graph1.update(agent_1_step_0, 1)
+    graph1.update(agent_1_step_1, 1)
 
     graph2 = Graph(2)
     graph2.update(agent_2_step_0, 2)
     graph2.update(agent_2_step_1, 2)
-    # graph2 = merge_graphs(graph0, 0, graph2, 2, (1, 2))
+    graph2 = merge_graphs(graph1, 1, graph2, 2, (1, 2))
 
-    graph2.print_local(2, all=True)
-    # graph2.apply_dimensions_to_graph()
-    # print(graph2)
+    # graph2.print_local(2, all=True)
+    graph2.apply_dimensions_to_graph()
+    print(graph2)
