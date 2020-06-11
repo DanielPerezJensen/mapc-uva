@@ -82,36 +82,42 @@ class TesterA(Agent, BDIAgent):
             # print(count)
         return best_goal
 
-    def enemy_closing_in(self,agent_id):
+    def enemy_closing_in(self):
         """
+
         """ 
-        old_locs = self.beliefs.get_local_agent_locations(agent_id, team='B')
-        new_locs = self.beliefs.get_local_agent_locations(agent_id, team='B')
-        return self.same_agent_closing_in(old_locs,new_locs)
+        own_loc = self.current_info('location')
+        old_locs = self.beliefs.get_agent_locations(step=(self.beliefs.get_step() -1), team='B')
+        new_locs = self.beliefs.get_agent_locations(step=self.beliefs.get_step(), team='B')
+        closer_enemy_builders =  self.same_agents_closing_in(old_locs,new_locs)
+        for enemy in closer_enemy_builders:
+                if self._manhattan_distance(own_loc, enemy) < 5:
+                    self.beliefs.get_direction(self._user_id, enemy)
         
         # if new_locs != old_locs:
             # for i in range(len(new_locs)+1):
                 # print('ok')
         
-    def same_agent_closing_in(self,old_locs,new_locs):
+    def same_agents_closing_in(self,old_locs,new_locs):
         """ 
         Returns True if the agent on the old location is the agent on the new location
         """
         own_loc = self.current_info('location')
+        closer_agents = []
         for old_loc in old_locs:
             for new_loc in new_locs:
                 
                 if self.same_agent(old_loc,new_loc):
                     # blocks_around_enemy = self.blocks_around_node(self.get_node(new_loc))
-                    distance_old_x = abs(old_loc[0] - own_loc[0])
-                    distance_new_x = abs(new_loc[0] - own_loc[0])
-                    distance_old_y = abs(old_loc[1] - own_loc[1]) 
-                    distance_new_y = abs(new_loc[1] - own_loc[1])
-                    if ((distance_old_x > (distance_new_x) or (distance_old_y > distance_new_y))):
+
+                    distance_old = self._manhattan_distance(old_loc, own_loc)
+                    distance_new = self._manhattan_distance(new_loc, own_loc)
+                    # if distance_old > distance_new and self.blocks_around_node(new_loc) > 1:
+                    if distance_old > distance_new:
                     # if ((distance_old_x > (distance_new_x) or (distance_old_y > distance_new_y)) and blocks_around_enemy > 1:
-                        return new_loc
-  
-        return own_loc
+                        closer_agents.append(new_loc)
+        return closer_agents
+
 
     def blocks_around_node(self, node):
         """
@@ -142,7 +148,10 @@ class TesterA(Agent, BDIAgent):
 
         return False
 
-    
+    @staticmethod
+    def _manhattan_distance(coords1, coords2):
+        return sum(abs(np.array(coords1, dtype=int) -
+                       np.array(coords2, dtype=int)))
 
 
 
@@ -180,7 +189,7 @@ class TesterA(Agent, BDIAgent):
 
     def test3(self):
         
-        loc = self.enemy_closing_in(self._user_id)
+        loc = self.enemy_closing_in()
         intentions = [self.nav_to]
         args = [(loc, self._user_id)]
         contexts = [tuple()]
@@ -189,10 +198,7 @@ class TesterA(Agent, BDIAgent):
 
         return intentions, args, contexts, descriptions, primitive
     
-    @staticmethod
-    def _manhattan_distance(coords1, coords2):
-        return sum(abs(np.array(coords1, dtype=int) -
-                       np.array(coords2, dtype=int)))
+    
 
 
 
