@@ -223,7 +223,7 @@ class Node(object):
         if isinstance(west, Node):
             self.directions['w'] = west
 
-    def _is_obstacle(self):
+    def _is_obstacle(self,step=None):
         """
         Determine if a node is an obstacle block.
         Parameters
@@ -236,6 +236,14 @@ class Node(object):
         # check for obstacles
         if self.terrain[0] == 'obstacle':
             return True
+        # print(list(self.things.keys()).sort())
+        if step and step in self.things.keys():
+            print('ok')
+            things = self.get_things(step)
+            for thing in things:
+                if thing[0] == 'marker':
+                    print('ok2')
+                    return 'marker'
         return False
 
     def _is_exp_obstacle(self):

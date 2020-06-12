@@ -35,6 +35,16 @@ class Agent(Server):
         self.steps = None
         self.beliefs = Graph(self._user_id)
 
+    def walk_back(self):
+        if self.last_action_move == 's':
+            return self.move('n')
+        if self.last_action_move == 'w':
+            return self.move('e')
+        if self.last_action_move == 'n':
+            return self.move('s')
+        if self.last_action_move == 'e':
+            return self.move('w')
+        
     def nav_to(self, goal, agent_id, adjacent=False):
         """
         Navigate to coordinates in the agents local reference frame.
@@ -75,12 +85,20 @@ class Agent(Server):
 
         direction = self.beliefs.get_direction(agent_id, new_loc)
 
-        if self.beliefs.nodes[new_loc]._is_obstacle():
+
+        if self.beliefs.nodes[new_loc]._is_obstacle(step=self.beliefs.get_step()) == 'marker':
+            action = self.walk_back()
+            return action
+        if self.beliefs.nodes[new_loc]._is_obstacle() :
             clear_pos_x = (new_loc[0] - curr_loc[0]) * 2
             clear_pos_y = (new_loc[1] - curr_loc[1]) * 2
             # Clear obstacle (invert flag because nav_to requires multiple
             action = self.clear(clear_pos_x, clear_pos_y)
             return action
+
+        
+
+        
         else:
             # Move to location (invert flag because nav_to requires
             # multiple moves)

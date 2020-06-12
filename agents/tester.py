@@ -5,7 +5,7 @@ if __name__ == "__main__":
 else:
     from .helpers import Agent
     from .helpers import BDIAgent
-
+import time
 import numpy as np
 
 class TesterA(Agent, BDIAgent):
@@ -24,7 +24,12 @@ class TesterA(Agent, BDIAgent):
                         self.add_last_intention()
 
                     self.beliefs.update(msg, self._user_id)
+                    
+
+                    start = time.time()
                     intention_addition = self.get_intention()
+                    end = time.time()
+                    print(end - start)
                     self.add_intention(*intention_addition)
                     action = self.execute_intention()
                     if action:
@@ -45,7 +50,7 @@ class TesterA(Agent, BDIAgent):
 
         for enemy in closer_enemy_builders:
                 if self._manhattan_distance(own_loc, enemy) < 6:
-                    direc = self.beliefs.get_direction(self._user_id, enemy)
+                    direc = self.get_relative_direction(own_loc, enemy)
                     return self.clear_relative_node(direc)
         return self.sit_still()
         
@@ -105,6 +110,30 @@ class TesterA(Agent, BDIAgent):
             
         return best_goal
 
+    def get_relative_direction(self, coordinate, relative):
+        """
+        Reasoning: Returns the relative direction of the relative node
+        compared to the coordinate
+        """
+        x_diff = coordinate[0] - relative[0]
+        y_diff = coordinate[1] - relative[1]
+        if x_diff > 0 and y_diff >= 0:
+            return 'nw'
+        if x_diff > 0 and y_diff < 0:
+            return 'sw'
+        if x_diff < 0 and y_diff >= 0:
+            return 'ne'
+        if x_diff < 0 and y_diff < 0:
+            return 'se'
+
+        if x_diff > 0 and abs(x_diff) > abs(y_diff):
+            return 'w'
+        if x_diff < 0 and abs(x_diff) > abs(y_diff):
+            return 'e'
+        if y_diff >= 0 and abs(y_diff) > abs(x_diff):
+            return 'n'
+        if y_diff < 0 and abs(y_diff) > abs(x_diff):
+            return 's'
     # def enemy_closing_in(self):
     #     """
 
@@ -177,6 +206,15 @@ class TesterA(Agent, BDIAgent):
             return self.clear_once(x+2,y)
         if direction == 's':
             return self.clear_once(x,y+2)
+
+        if direction == 'ne':
+            return self.clear_once(x+1,y-1)
+        if direction == 'nw':
+            return self.clear_once(x-1,y-1)
+        if direction == 'se':
+            return self.clear_once(x+1,y+1)
+        if direction == 'sw':
+            return self.clear_once(x-1,y+1)
 
     def clear_once(self, x, y):
         """
@@ -289,7 +327,7 @@ class TesterB(Agent, BDIAgent):
     def get_intention(self):
         # self.beliefs.print_local(self._user_id)
         inf = self.beliefs.get_node(self.current_info('location')).get_things()[0][1]
-        print(inf)
+        # print(inf)
         if ('marker','clear') in inf:
             return self.sit_still()
         return self.test3()
@@ -391,13 +429,13 @@ class TesterB(Agent, BDIAgent):
 
     def avoid_clear(self):
         inf = self.beliefs.get_node(self.current_info('location')).get_things()[0][1]
-        print(inf)
+        # print(inf)
         if ('marker','clear') in inf:
             self.sit_still()
 
     def test3(self):
-        x,y = self.current_info('location')
-        print(self.beliefs.get_node((x,y)).get_things()[0][1])
+        # x,y = self.current_info('location')
+        # print(self.beliefs.get_node((x,y)).get_things()[0][1])
         loc = self._get_nearest_goal()
         intentions = [self.nav_to]
         args = [(loc, self._user_id)]
