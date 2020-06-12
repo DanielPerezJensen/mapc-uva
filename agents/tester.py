@@ -35,7 +35,20 @@ class TesterA(Agent, BDIAgent):
                         print("Done with action")
 
     def get_intention(self):
-        return self.test3()
+        own_loc = self.current_info('location')
+        old_locs = self.beliefs.get_agent_locations(step=(self.beliefs.get_step() -1), team='B')
+        new_locs = self.beliefs.get_agent_locations(step=self.beliefs.get_step(), team='B')
+        new_locs = [i[0] for i in new_locs]
+        old_locs = [i[0] for i in old_locs]
+
+        closer_enemy_builders =  self.same_agents_closing_in(old_locs,new_locs)
+
+        for enemy in closer_enemy_builders:
+                if self._manhattan_distance(own_loc, enemy) < 6:
+                    direc = self.beliefs.get_direction(self._user_id, enemy)
+                    return self.clear_relative_node(direc)
+        return self.sit_still()
+        
 
     def neighbourhood(self, x, y, depth=1):
         """
@@ -62,6 +75,16 @@ class TesterA(Agent, BDIAgent):
 
         return node_list
 
+    def sit_still(self):
+        intentions = [self.skip] 
+        args = [tuple()] 
+        contexts = [tuple()] 
+        descriptions = ["skip"]
+        primitives = [True]
+
+        return intentions, args, contexts, descriptions, primitives
+
+
 
     def get_crowded_goal(self):
         """
@@ -79,24 +102,28 @@ class TesterA(Agent, BDIAgent):
             if count > max_enemies:
                 best_goal = goal
                 max_enemies = count
-            # print(count)
+            
         return best_goal
 
-    def enemy_closing_in(self):
-        """
+    # def enemy_closing_in(self):
+    #     """
 
-        """ 
-        own_loc = self.current_info('location')
-        old_locs = self.beliefs.get_agent_locations(step=(self.beliefs.get_step() -1), team='B')
-        new_locs = self.beliefs.get_agent_locations(step=self.beliefs.get_step(), team='B')
-        closer_enemy_builders =  self.same_agents_closing_in(old_locs,new_locs)
-        for enemy in closer_enemy_builders:
-                if self._manhattan_distance(own_loc, enemy) < 5:
-                    self.beliefs.get_direction(self._user_id, enemy)
+    #     """ 
+    #     own_loc = self.current_info('location')
+    #     old_locs = self.beliefs.get_agent_locations(step=(self.beliefs.get_step() -1), team='B')
+    #     old_locs = [i[0] for i in old_locs]
+    #     new_locs = self.beliefs.get_agent_locations(step=self.beliefs.get_step(), team='B')
+    #     # new_locs = [i[0] for i in new_locs]
         
-        # if new_locs != old_locs:
-            # for i in range(len(new_locs)+1):
-                # print('ok')
+    #     closer_enemy_builders =  self.same_agents_closing_in(old_locs,new_locs)
+    #     for enemy in closer_enemy_builders:
+    #             if self._manhattan_distance(own_loc, enemy) < 5:
+    #                 direc = self.beliefs.get_direction(self._user_id, enemy)
+    #                 self.clear_relative_node(direc)
+        
+    #     # if new_locs != old_locs:
+    #         # for i in range(len(new_locs)+1):
+    #             # print('ok')
         
     def same_agents_closing_in(self,old_locs,new_locs):
         """ 
@@ -135,11 +162,40 @@ class TesterA(Agent, BDIAgent):
                     count += 1
 
         return count
+
+    
+
+
+    def clear_relative_node(self, direction):
+        x,y = self.current_info('location')
+
+        if direction == 'n':
+            return self.clear_once(x,y-2)
+        if direction == 'w':
+            return self.clear_once(x-2,y)
+        if direction == 'e':
+            return self.clear_once(x+2,y)
+        if direction == 's':
+            return self.clear_once(x,y+2)
+
+    def clear_once(self, x, y):
+        """
+        Intention: Clears a coordinate once to 
+        """
+        intentions = [self.clear] 
+        args = [(x, y)] 
+        contexts = [(x, y)] 
+        descriptions = ["clear"]
+        primitives = [True]
+
+        return intentions, args, contexts, descriptions, primitives
+
     @staticmethod
     def same_agent(old_loc,new_loc):
         """ 
         Returns True if the agent on the old location is the agent on the new location
         """
+        
         abs_x = abs(old_loc[0] - new_loc[0])
         abs_y = abs(old_loc[1] - new_loc[1]) 
         
@@ -231,6 +287,11 @@ class TesterB(Agent, BDIAgent):
                         print("Done with action")
 
     def get_intention(self):
+        # self.beliefs.print_local(self._user_id)
+        inf = self.beliefs.get_node(self.current_info('location')).get_things()[0][1]
+        print(inf)
+        if ('marker','clear') in inf:
+            return self.sit_still()
         return self.test3()
 
     def neighbourhood(self, x, y, depth=1):
@@ -277,6 +338,14 @@ class TesterB(Agent, BDIAgent):
                 max_enemies = count
             # print(count)print
         return best_goal
+    def sit_still(self):
+        intentions = [self.skip] 
+        args = [tuple()] 
+        contexts = [tuple()] 
+        descriptions = ["skip"]
+        primitives = [True]
+
+        return intentions, args, contexts, descriptions, primitives
 
     def _get_nearest_goal(self):
         """
@@ -296,29 +365,39 @@ class TesterB(Agent, BDIAgent):
     #     center_y = max(goals,key=lambda item:item[1])[1] - min(goals,key=lambda item:item[1])[1] 
     #     return (center_x,center_y)
 
-    def test(self):
-        """
-        Prevents enemy from moving towards goal
-        """
-        self.beliefs
-        intentions = [self.nav_to, self.test2]
-        args = [((1, 1), self._user_id), tuple()]
-        contexts = [tuple(), tuple()]
-        descriptions = ["RetrievingBlock", "NonPrimitive"]
-        primitive = [True, False]
+    
+    
+    # def test(self):
+    #     """
+    #     Prevents enemy from moving towards goal
+    #     """
 
-        return intentions, args, contexts, descriptions, primitive
+    #     intentions = [self.nav_to, self.test2]
+    #     args = [((1, 1), self._user_id), tuple()]
+    #     contexts = [tuple(), tuple()]
+    #     descriptions = ["RetrievingBlock", "NonPrimitive"]
+    #     primitive = [True, False]
 
-    def test2(self):
-        intentions = [self.test3, self.nav_to]
-        args = [tuple(), ((2, 2), self._user_id)]
-        contexts = [tuple(), tuple()]
-        descriptions = ["NonPrimitive", "Primitive"]
-        primitive = [False, True]
+    #     return intentions, args, contexts, descriptions, primitive
 
-        return intentions, args, contexts, descriptions, primitive
+    # def test2(self):
+    #     intentions = [self.test3, self.nav_to]
+    #     args = [tuple(), ((2, 2), self._user_id)]
+    #     contexts = [tuple(), tuple()]
+    #     descriptions = ["NonPrimitive", "Primitive"]
+    #     primitive = [False, True]
+
+    #     return intentions, args, contexts, descriptions, primitive
+
+    def avoid_clear(self):
+        inf = self.beliefs.get_node(self.current_info('location')).get_things()[0][1]
+        print(inf)
+        if ('marker','clear') in inf:
+            self.sit_still()
 
     def test3(self):
+        x,y = self.current_info('location')
+        print(self.beliefs.get_node((x,y)).get_things()[0][1])
         loc = self._get_nearest_goal()
         intentions = [self.nav_to]
         args = [(loc, self._user_id)]
@@ -334,9 +413,10 @@ class TesterB(Agent, BDIAgent):
                        np.array(coords2, dtype=int)))
 
 
+
 if __name__ == "__main__":
     a_list = []
-    for i in range(1, 3):
+    for i in range(1, 2):
         a_list.append(TesterA(f"agentA{i}", "1"))
         a_list[i - 1].start()
 
