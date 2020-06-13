@@ -75,7 +75,7 @@ class Generator(Agent, BDIAgent):
                 with open("data.txt", "a") as text_file:
                     for path in self.paths:
                         print(path)
-                        text_file.write(",".join(str(i) for i in path))
+                        text_file.write(";".join(str(i) for i in path))
                         text_file.write("\n")
                 return
 
