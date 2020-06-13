@@ -44,7 +44,7 @@ class BDIAgent():
 
             if context:
                 crd, thing = context
-                print(beliefs.get_node(crd).get_things(beliefs.step))
+                # Drop intention if the context is no longer believed
                 if thing not in beliefs.get_node(crd).get_things(beliefs.step):
                     self.intention_queue.popleft()
                     return True
