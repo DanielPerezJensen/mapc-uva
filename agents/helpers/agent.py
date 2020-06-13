@@ -466,7 +466,7 @@ class DStarLite(object):
         else:
             return None
 
-    def update(self, beliefs):
+    def update(self, beliefs, overwrite_loc=None):
         """
         Update the path if necessary.
 
@@ -478,7 +478,10 @@ class DStarLite(object):
         # Update observations
         self.beliefs = beliefs
         self.obstacle_cost = 32 * math.e ** (-0.008 * self.beliefs.energy)
-        self.position = beliefs.get_current(self.agent_id).location
+        if overwrite_loc:
+            self.position = overwrite_loc
+        else:
+            self.position = beliefs.get_current(self.agent_id).location
         new_obs = [obs for sublist in beliefs.new_obs.values()
                    for obs in sublist]
 

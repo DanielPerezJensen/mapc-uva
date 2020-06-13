@@ -9,6 +9,7 @@ __pycache__/
 # Private paths
 tools/path_to_config.txt
 tools/customMap.txt
+evaluation/
 
 # Distribution / packaging
 .Python

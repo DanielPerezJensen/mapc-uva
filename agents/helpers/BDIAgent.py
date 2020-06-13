@@ -26,9 +26,8 @@ class BDIAgent():
                      in zip(methods, args, contexts,
                             descriptions, primitives)]
 
-        if additions != self.previous_additions:
-            self.intention_queue.extend(additions)
-            self.previous_additions = additions
+        self.intention_queue.extend(additions)
+        self.previous_additions = additions
 
     def add_last_intention(self):
         self.intention_queue.appendleft(self.last_intention)

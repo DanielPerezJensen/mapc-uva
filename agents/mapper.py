@@ -1,10 +1,12 @@
 from .helpers import Agent
+from .helpers.agent import DStarLite
 
 import random
 from math import floor, ceil, exp
 from collections import defaultdict
 from operator import itemgetter
 import sys
+import time
 
 
 class Mapper(Agent):
@@ -14,21 +16,56 @@ class Mapper(Agent):
         """
         if not hasattr(self, 'local_random'):
             self.local_random = random.Random()
-            self.local_random.seed(self.local_random.\
-                choice(range(sys.maxsize)) * int(self._user[6:]*1024))
-            self.exploration_complete = False
+            self.local_random.seed(self.local_random.
+                                   choice(range(sys.maxsize)) *
+                                   int(self._user[6:]*1024))
 
-        # TODO: Actual action selection
-        if not self.exploration_complete:
-            selected_action = self.simple_tghm_move()
-        else:
-            # TODO Send message to strategist that it can change role.
-            selected_action = ([self.skip], [()], [tuple()],
-                               ['doneExploring'], [True])
+        selected_action = ([self.exploration],
+                           [()],
+                           [tuple()],
+                           ['exploreEnvironment'],
+                           [False])
 
         return selected_action
 
-    def simple_tghm_move(self, lambd=0.2, N_0=20):
+    def exploration(self):
+        if not hasattr(self, 'exploration_compeleted'):
+            self.exploration_complete = False
+        # TODO select exploration mode
+        mode = 'tghm'
+
+        if mode == 'tghm':
+            return ([self.tghm_exploration],
+                    [(0.8, 20)],
+                    [tuple()],
+                    ['tghmExploration'],
+                    [False])
+
+        elif mode == 'zigzag':
+            return ([self.zigzag_exploration], [(())], [tuple()],
+                    ['zigzagExploration'], [False])
+        else:
+            return ([self.random_exploration], [(range(5, 15))], [tuple()],
+                    ['randomExploration'], [False])
+
+    def tghm_exploration(self, lambd, N_0):
+        current = self.beliefs.get_current(self._user_id).location
+        if not hasattr(self, 'topology'):
+            self.topology = [current]
+            self.candidate_target_points = set()
+            self.candidate_topology_points = {current}
+            self.t = 1
+
+        while self.candidate_topology_points:
+            return ([self.tghm_move],
+                    [(lambd, N_0)],
+                    [tuple()],
+                    ['chooseNextTargetPoint'],
+                    [False])
+
+        return ([self.skip], [()], [tuple()], ['explorationCompleted'], [True])
+
+    def tghm_move(self, lambd, N_0):
         """
         Practically does the same as tghm_move() only it simplifies the
         process. This is because the actual paper adds a lot of things we don't
@@ -45,23 +82,15 @@ class Mapper(Agent):
             (amount of nodes it hasn't discovered yet) must be higher than
             N_0.
         """
-        # TODO; Determine good parameter values
         current = self.beliefs.get_current(self._user_id).location
 
-        if not hasattr(self, 'topology'):
-            self.topology = [current]
-            self.candidate_target_points = set()
-            self.candidate_topology_points = set()
-            self.t = 1
-        
         self.candidate_target_points = \
             self.generate_candidate_target_points(current)
-        print(self.candidate_target_points)
 
         if self.candidate_target_points:
             potential_points = self.candidate_target_points.\
                 union(set([location for location, V in
-                self.candidate_topology_points]))
+                           self.candidate_topology_points]))
 
             self.candidate_topology_points.clear()
 
@@ -69,13 +98,11 @@ class Mapper(Agent):
             if self.calculate_unknown_N(candidate) > N_0:
                 V = self.utility_V(current, candidate, lambd)
                 self.candidate_topology_points.add((candidate, V))
-
         if self.candidate_topology_points:
             max_V = max(self.candidate_topology_points, key=itemgetter(1))[1]
             highest_points = [location for location, V in
                               self.candidate_topology_points if V == max_V]
             next_target_point = self.local_random.choice(highest_points)
-
             print(f'Next target point: {next_target_point}')
             self.topology.append(next_target_point)
             self.t += 1
@@ -86,14 +113,7 @@ class Mapper(Agent):
                     ['moveToNextTargetPoint'],
                     [True])
         else:
-            print('Exploration completed!')
             self.exploration_complete = True
-            self.beliefs.print_local(self._user_id, all=True)
-            return ([self.skip],
-                    [()],
-                    [tuple()],
-                    ['tghmExplorationCompleted'],
-                    [True])
 
     def calculate_unknown_N(self, location):
         """
@@ -113,11 +133,32 @@ class Mapper(Agent):
         x, y = target_point
         cx, cy = current
 
-        # TODO: Calculate Dstar path length
-        # Manhattan distance
-        distance = abs(x-cx) + abs(y-cy)
+        distance = len(self.generate_path(target_point))
 
         return self.calculate_unknown_N(target_point) * exp(-lambd*distance)
+
+    def generate_path(self, goal):
+        """
+        Generate the path the agent would move from its current location to
+        the goal location.
+
+        Arguments
+        ---------
+        goal: tuple(int, int)
+            The goal location of the path.
+        """
+        temp_navigation = DStarLite(self.beliefs, goal, self._user_id)
+        path = []
+
+        while True:
+            next_position = temp_navigation.move_to_goal()
+            if next_position:
+                path.append(next_position)
+                temp_navigation.update(self.beliefs,
+                                       overwrite_loc=next_position)
+            else:
+                del temp_navigation
+                return path
 
     def generate_candidate_target_points(self, current):
         """
@@ -133,14 +174,14 @@ class Mapper(Agent):
         candidate_target_points = set()
         cx, cy = current
 
-        # TODO Choose less motion points
-        motion_locations = [(5, 0), (5, 5), (0, 5), (-5, 5), (-5, 0),(-5, -5),
-                            (0, -5), (5, -5)]
+        motion_locations = [(5, 0), (0, 5), (-5, 0), (0, -5), (3, 2), (2, 3),
+                            (-3, 2), (-2, 3), (-3, -2), (-2, -3), (3, -2),
+                            (2, -3)]
 
         for x, y in self.beliefs.get_local_node_locations(self._user_id,
-                offset=(0, 0)):
-            if abs(x) + abs(y) == 5:
-                x, y = x + cx, y + cy
+                                                          offset=(0, 0)):
+            if (x, y) in motion_locations:
+                x, y = self.beliefs.modulate((x + cx, y + cy))
                 if self.beliefs.nodes[(x, y)].get_terrain()[0] != 'obstacle':
                     # Frontier Type I
                     candidate_target_points.add((x, y))
@@ -176,32 +217,38 @@ class Mapper(Agent):
                             crossed_cells.append((i, ceil(j)))
 
                     crossed_empty_cells = [cell for cell in crossed_cells if
-                                        self.beliefs.nodes[cell].
-                                        get_terrain()[0] != 'obstacle']
+                                           self.beliefs.nodes[cell].
+                                           get_terrain()[0] != 'obstacle']
 
                     crossed_empty_cells.sort(key=lambda c:
-                                            abs(x-c[0]) + abs(y-c[1]))
+                                             abs(x-c[0]) + abs(y-c[1]))
 
                     if crossed_empty_cells:
                         candidate_target_points.add(crossed_empty_cells[0])
 
         return candidate_target_points
 
-    def calculate_traversal_N(self, location):
+    def random_exploration(self, r_range):
         """
-        Calculate the number of traversal grids within the agent's
-        local vision. Unknown nodes count as traverse grids, but obstacles do
-        not.
-        """
-        local_nodes = self.beliefs.get_local_node_locations(self._user_id,
-                                                            offset=location)
-        traversal_nodes = [node for node in local_nodes if
-                           self.beliefs.nodes[node].get_terrain()[0] !=
-                           'obstalce']
-        
-        return len(traversal_nodes)
+        Explore by choosing random nodes to move towards. Exploration is
+        finished when 100% of the nodes in the map are covered.
 
-    def random_move(self, r_range=range(5, 15)):
+        Arguments
+        ---------
+        r_range: list
+            The range in which the x and y coordinates will be chosen.
+        """
+        while not self.exploration_complete:
+            height, width = self.beliefs.height, self.beliefs.width
+            if height and width and height * width == len(self.beliefs.nodes):
+                self.exploration_complete = True
+
+            return ([self.random_move], [()], [tuple()],
+                    ['chooseRandomGoal'], [False])
+        
+        return ([self.skip], [()], [tuple()], ['explorationCompleted'], [True])
+
+    def random_move(self, r_range):
         """
         Set a random goal for the agent to move towards (within a
         certain range).
@@ -211,15 +258,37 @@ class Mapper(Agent):
         r_range: list
             The range in which the x and y coordinates will be chosen.
         """
+        cx, cy = self.beliefs.get_current(self._user_id).location
         r_range = list(r_range) + [-x for x in list(r_range)]
-        goal = (self.local_random.choice(r_range),
-                self.local_random.choice(r_range))
-
+        goal = (self.local_random.choice(r_range) + cx,
+                self.local_random.choice(r_range) + cy)
+        print(f'Goal: {goal}')
         return ([self.nav_to],
                 [(goal, self._user_id)],
                 [tuple()],
                 ['moveRandom'],
                 [True])
+
+    def zigzag_exploration(self):
+        """
+        Explore by moving in a zigzag pattern. Exploration is
+        finished when 100% of the nodes in the map are covered.
+
+        Arguments
+        ---------
+        path_length: int
+            The number of steps the agent walks vertically before moving
+            11 steps horizontally (because the local vision reaches 5 cells).
+        """
+        while not self.exploration_complete:
+            height, width = self.beliefs.height, self.beliefs.width
+            if height and width and height * width == len(self.beliefs.nodes):
+                self.exploration_complete = True
+
+            return ([self.zigzag_move], [()], [tuple()],
+                    ['performZigzagAction'], [False])
+        
+        return ([self.skip], [()], [tuple()], ['explorationCompleted'], [True])
 
     def zigzag_direction(self, direction, dimension, path_length):
         """
@@ -261,7 +330,7 @@ class Mapper(Agent):
                 [descriptions],
                 [True])
 
-    def zigzag_move(self, path_length=5, direction='east'):
+    def zigzag_move(self, path_length=20, direction='east'):
         """
         Move is a zigzag pattern to explore the environment most efficiently.
 
