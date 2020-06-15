@@ -128,13 +128,13 @@ class Builder(Agent, BDIAgent):
                                 self._manhattan_distance(x,
                                 self.beliefs.get_current(self._user_id)))
                 if comm_queue:
-                    comm_queue.put(('goal_loc', goal))
+                    comm_queue.put(('goal_loc', self.goal))
             else:
                 return tuple()
 
         return (
             [self.nav_to, self.broadcast_msg],
-            [(goal, self._user_id), (comm_queue, ('0 ready',))],
+            [(self.goal, self._user_id), (comm_queue, ('0 ready',))],
             [tuple(), tuple()],
             ["navToGoal", "communicateAtGoal"],
             [True, False]
