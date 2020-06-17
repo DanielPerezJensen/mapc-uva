@@ -1,0 +1,70 @@
+{
+    "steps": 750,
+    "randomSeed": 17,
+    "randomFail": 1,
+    "entities": {
+        "standard": 1
+    },
+    "clusterBounds": [
+        1,
+        1
+    ],
+    "clusterSize": 3,
+    "clearSteps": 3,
+    "clearEnergyCost": 30,
+    "disableDuration": 4,
+    "maxEnergy": 300,
+    "attachLimit": 10,
+    "grid": {
+        "height": 50,
+        "width": 50,
+        "instructions": [],
+        "goals": {
+            "number": 0,
+            "size": [
+                1,
+                2
+            ]
+        }
+    },
+    "blockTypes": [
+        1,
+        1
+    ],
+    "dispensers": [
+        0,
+        0
+    ],
+    "tasks": {
+        "size": [
+            0,
+            0
+        ],
+        "duration": [
+            100,
+            200
+        ],
+        "probability": 0.05,
+        "taskboards": 0,
+        "rewardDecay": [
+            1,
+            2
+        ],
+        "lowerRewardLimit": 10,
+        "distanceToTaskboards": 8
+    },
+    "events": {
+        "chance": 0,
+        "radius": [
+            3,
+            5
+        ],
+        "warning": 5,
+        "create": [
+            -3,
+            1
+        ],
+        "perimeter": 2
+    },
+    "setup": "conf/setup/mapper_setup1.txt"
+}
