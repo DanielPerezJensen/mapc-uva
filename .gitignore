@@ -10,6 +10,7 @@ __pycache__/
 tools/path_to_config.txt
 tools/customMap.txt
 evaluation/
+.vscode/
 
 # Distribution / packaging
 .Python
