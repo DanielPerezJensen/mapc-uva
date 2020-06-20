@@ -1,14 +1,13 @@
 from .helpers import BDIAgent
 from .attacker import Attacker
 from .builder import Builder
-from .defender import Defender
-from .mapper import Mapper
+from .scout import Scout
 
 import json
 import time
 import threading
 
-AGENTS = [Attacker, Builder, Defender, Mapper]
+AGENTS = [Attacker, Builder, Scout]
 
 
 class SuperAgent(*AGENTS, BDIAgent):
@@ -56,7 +55,7 @@ class SuperAgent(*AGENTS, BDIAgent):
 
                     # TODO: Listen to strategist thread for role
                     # TODO: Set role as chosen by strategist
-                    agent_type = AGENTS[3]
+                    agent_type = AGENTS[2]
 
                     # # Read last action if it randomly failed
                     if msg['content']['percept']['lastActionResult'] == \

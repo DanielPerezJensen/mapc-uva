@@ -35,6 +35,9 @@ class Agent(Server):
         self.steps = None
         self.beliefs = Graph(self._user_id)
 
+    def get_location(self):
+        return self.beliefs.get_current(self._user_id).location
+
     def nav_to(self, goal, agent_id, adjacent=False):
         """
         Navigate to coordinates in the agents local reference frame.
@@ -53,7 +56,7 @@ class Agent(Server):
         Returns the action.
         If at goal location or no path is possible, returns None.
         """
-
+        goal = self.beliefs.modulate(goal)
         # Initialize or update
         if not self.dstar or self.dstar.goal != goal:
             self.dstar = DStarLite(self.beliefs, goal, agent_id)
@@ -454,7 +457,7 @@ class DStarLite(object):
         """
         Generator object that yields the best next step at each call.
         """
-
+        self.goal = self.beliefs.modulate(self.goal)
         if self.position != self.goal:
             if self.g(self.position) == float('inf'):
                 return None
@@ -466,7 +469,7 @@ class DStarLite(object):
         else:
             return None
 
-    def update(self, beliefs, overwrite_loc=None):
+    def update(self, beliefs):
         """
         Update the path if necessary.
 
@@ -476,12 +479,10 @@ class DStarLite(object):
             The updated beliefs instance.
         """
         # Update observations
+        self.goal = self.beliefs.modulate(self.goal)
         self.beliefs = beliefs
         self.obstacle_cost = 32 * math.e ** (-0.008 * self.beliefs.energy)
-        if overwrite_loc:
-            self.position = overwrite_loc
-        else:
-            self.position = beliefs.get_current(self.agent_id).location
+        self.position = beliefs.get_current(self.agent_id).location
         new_obs = [obs for sublist in beliefs.new_obs.values()
                    for obs in sublist]
 

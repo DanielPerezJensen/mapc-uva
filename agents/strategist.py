@@ -217,8 +217,7 @@ class Strategist(Server):
                 abs(agent_location[0])
 
             if not main_agent.beliefs.width or \
-                    main_agent.beliefs.width/width == \
-                    round(main_agent.beliefs.width/width):
+                    main_agent.beliefs.width % width == 0:
                 self.apply_dimensions(width=width)
 
         if main_location[1] + location[1] != agent_location[1]:
@@ -229,8 +228,7 @@ class Strategist(Server):
                 abs(agent_location[1])
 
             if not main_agent.beliefs.height or \
-                    main_agent.beliefs.height/height == \
-                    round(main_agent.beliefs.height/height):
+                    main_agent.beliefs.height % height == 0:
                 self.apply_dimensions(height=height)
 
     def apply_dimensions(self, width=0, height=0):

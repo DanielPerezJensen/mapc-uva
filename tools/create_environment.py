@@ -49,9 +49,9 @@ def main():
     # get path to config, request it if it does not yet exist
     path_to_config = get_path_to_config(tools_prefix)
 
-    config_name = "Custom.json"
-    sim_name = "sim/simCustom.json"
-    setup_name = "setup/custom.txt"
+    config_name = "CustomMap1.json"
+    sim_name = "sim/CustomMap1.json"
+    setup_name = "setup/customMap1.txt"
 
     # create the setup file
     setup_file = open(path_to_config + setup_name, "w")
