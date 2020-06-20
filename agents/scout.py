@@ -6,8 +6,6 @@ from math import floor, ceil, exp
 from collections import defaultdict
 from operator import itemgetter
 import sys
-import time
-import psutil
 
 
 class Scout(Agent):
