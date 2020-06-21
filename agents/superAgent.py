@@ -25,11 +25,8 @@ class SuperAgent(*AGENTS, BDIAgent):
         """
         strategist = [agent for agent in threading.enumerate()
                       if agent.name == 'Strategist'][0]
-        if strategist:
-            self.input_queue = strategist.input_queue
-            self.output_queue = strategist.output_queue
-        else:
-            print('Agents play without the strategist.')
+        self.input_queue = strategist.input_queue
+        self.output_queue = strategist.output_queue[self._user_id - 1]
 
         while True:
             # Receive a message.
@@ -38,6 +35,9 @@ class SuperAgent(*AGENTS, BDIAgent):
             if msg:
                 # Parse the response.
                 if msg["type"] == "request-action":
+
+                    # time.sleep(2)
+
                     # Get the request id
                     request_id = self._get_request_id(msg)
                     agent_id = self._user_id
@@ -47,15 +47,32 @@ class SuperAgent(*AGENTS, BDIAgent):
                     # Send a message to the strategist that the agent's beliefs
                     # have been updated. The agents will continue when all
                     # agents updated their belief.
-                    if hasattr(self, 'input_queue'):
-                        self.input_queue.put(('update', self))
-                        self.input_queue.join()
+                    self.input_queue.put(('update', self))
+                    self.input_queue.join()
+                    self.input_queue.put(('merge', self))
 
-                        self.input_queue.put(('merge', self))
+                    while not self.output_queue.empty():
+                        task, info = self.output_queue.get()
+                        if task == 'role assignment':
+                            # Listen to strategist thread for role
+                            agent_type = AGENTS[info]
+                            self.pretty_print('is assigned ' +
+                                              f'{agent_type.__name__}')
+                            self.output_queue.task_done()
 
-                    # TODO: Listen to strategist thread for role
-                    # TODO: Set role as chosen by strategist
-                    agent_type = AGENTS[2]
+                        elif task == 'shift' and \
+                                hasattr(self, 'candidate_topology_points'):
+                            new_points = set()
+                            while self.candidate_topology_points != set():
+                                location, V = \
+                                    self.candidate_topology_points.pop()
+                                new_points.add(((location[0] + info[0],
+                                                location[1] + info[1]), V))
+
+                            self.candidate_topology_points = new_points
+                            self.output_queue.task_done()
+
+                    time.sleep(2)
 
                     # # Read last action if it randomly failed
                     if msg['content']['percept']['lastActionResult'] == \

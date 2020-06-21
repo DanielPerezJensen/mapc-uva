@@ -4,6 +4,7 @@ from .helpers.graph import merge_graphs
 
 from queue import Queue
 import threading
+import numpy as np
 
 
 class Strategist(Server):
@@ -11,7 +12,7 @@ class Strategist(Server):
     The strategist agent uses game information to decide which agent plays
     what role.
     """
-    def __init__(self, user, queue, print_json=False):
+    def __init__(self, user, teamSize, print_json=False):
         """
         Initialize the stratagist as a child of the server. Add an input_queue,
         which is used for task from the agents to the strategist, and an
@@ -31,15 +32,20 @@ class Strategist(Server):
             If the communication jsons should be printed.
         """
         super().__init__(user, print_json)
-        self.input_queue = queue[0]
-        self.output_queue = queue[1]
+        self.teamSize = teamSize
+        self.input_queue = Queue(maxsize=self.teamSize)
+        self.output_queue = [Queue(maxsize=0) for n in range(self.teamSize)]
         print(f'\033[1;34m{self._user}\033[0;0m running')
 
     def run(self):
         """
-        The function that runs the strategist.
+        The function that runs the strategist. It starts by assigning a role to
+        every agent. After that it handles the queue requests the agents
+        send to it.
         """
-        lock = threading.Lock()
+
+        self.assign_agent_roles()
+
         while True:
             task = self.peek_queue()
             if task == 'update':
@@ -60,6 +66,40 @@ class Strategist(Server):
                 potential_agents = self.identifying_agents(agent)
                 self.merge_agent_graphs(agent, potential_agents)
                 self.input_queue.task_done()
+            
+            elif task == 'new role':
+                task, agent = self.input_queue.get()
+                self.assign_new_agent_role(agent)
+                self.input_queue.task_done()
+
+    def assign_agent_roles(self):
+        """
+        Assigns a role to each agent.
+        Role division:
+        0: Attackers (30 %)
+        1: Builders (50 %)
+        2: Scouts (20 %), scouts will be assigned a different role, once the
+          exploration is completed.
+        """
+        self.agent_roles = np.random.choice([0, 1, 2], self.teamSize, 
+                                            p=[0.1, 0.1, 0.8])
+
+        for i, role in enumerate(self.agent_roles):
+            self.output_queue[i].put(('role assignment', role))
+    
+    def assign_new_agent_role(self, agent):
+        """
+        Assign a new role to the agent. The new agent will be assigned either
+        become an attacker or builder.
+
+        Arguments
+        ---------
+        agent: SuperAgent
+            The agent in question.
+        """
+        role = np.random.choice([0, 1], 1, p=[0.5, 0.5])[0]
+        self.agent_roles[agent._user_id - 1] = role
+        self.output_queue[agent._user_id - 1].put(('role assignment', role))
 
     def peek_queue(self):
         """
@@ -188,6 +228,15 @@ class Strategist(Server):
                                                  agent._user_id,
                                                  location)
                         print(f'{agent._user} merged with {main_agent._user}')
+
+                        g1_x, g1_y = main_agent.get_location()
+                        g2_x, g2_y = agent.get_location()
+                        shift = (g1_x + location[0] - g2_x,
+                                 g1_y + location[1] - g2_y)
+                        
+                        for agent_id in agent.beliefs.current:
+                            self.output_queue[agent_id - 1].put(('shift',
+                                                                 shift))
                     else:
                         new_graph = merge_graphs(agent.beliefs,
                                                  agent._user_id,
@@ -195,6 +244,15 @@ class Strategist(Server):
                                                  main_agent._user_id,
                                                  (-location[0], -location[1]))
                         print(f'{main_agent._user} merged with {agent._user}')
+                    
+                        g1_x, g1_y = agent.get_location()
+                        g2_x, g2_y = main_agent.get_location()
+                        shift = (g1_x + location[0] - g2_x,
+                                 g1_y + location[1] - g2_y)
+                        
+                        for agent_id in main_agent.beliefs.current:
+                            self.output_queue[agent_id - 1].put(('shift',
+                                                                 shift))
 
                     for agent in new_graph.current:
                         self.get_agent(agent).beliefs = new_graph

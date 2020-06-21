@@ -32,44 +32,42 @@ class Scout(Agent):
             self.exploration_complete = False
         mode = 'tghm'
 
-        if mode == 'tghm':
-            current = self.get_location()
-            if not hasattr(self, 'topology'):
-                self.topology = [current]
-                self.candidate_target_points = set()
-                self.candidate_topology_points = set()
-                self.t = 1
+        if not self.exploration_complete:
+            if mode == 'tghm':
+                current = self.get_location()
+                if not hasattr(self, 'topology'):
+                    self.topology = [current]
+                    self.candidate_target_points = set()
+                    self.candidate_topology_points = set()
+                    self.t = 1
 
-            while self.candidate_topology_points or self.t == 1:
-                return ([self.tghm_move],
-                        [(0.5, 5)],
-                        [tuple()],
-                        ['chooseNextTargetPoint'],
-                        [False])
+                while self.candidate_topology_points or self.t == 1:
+                    return ([self.tghm_move],
+                            [(0.5, 5)],
+                            [tuple()],
+                            ['chooseNextTargetPoint'],
+                            [False])
 
-            return ([self.skip],
+            else:
+                while not self.exploration_complete:
+                    height, width = self.beliefs.height, self.beliefs.width
+                    if height and width and \
+                            len(self.beliefs.nodes) > 0.99*(height * width):
+                        self.exploration_complete = True
+
+                    return ([self.random_move],
+                            [()],
+                            [tuple()],
+                            ['chooseRandomGoal'],
+                            [False])
+
+        self.input_queue.put(('new role', self))
+        return ([self.skip],
                     [()],
                     [tuple()],
                     ['explorationCompleted'],
                     [True])
-
-        else:
-            while not self.exploration_complete:
-                height, width = self.beliefs.height, self.beliefs.width
-                if height and width and height * width == len(self.beliefs.nodes):
-                    self.exploration_complete = True
-
-                return ([self.random_move],
-                        [()],
-                        [tuple()],
-                        ['chooseRandomGoal'],
-                        [False])
-        
-            return ([self.skip],
-                    [()],
-                    [tuple()],
-                    ['explorationCompleted'],
-                    [True])
+            
 
     def tghm_exploration(self, lambd, N_0):
         current = self.get_location()
@@ -90,9 +88,8 @@ class Scout(Agent):
 
     def tghm_move(self, lambd, N_0):
         """
-        Practically does the same as tghm_move() only it simplifies the
-        process. This is because the actual paper adds a lot of things we don't
-        need as we already have our own graph in a simplified world.
+        Create a exploration algorithm that uses distance and information gain
+        to choose its next goal point.
 
         Arguments
         ---------
@@ -120,6 +117,8 @@ class Scout(Agent):
                 union(set([location for location, V in
                            self.candidate_topology_points]))
 
+            potential_points = set([self.beliefs.modulate(loc) for loc in
+                                    list(potential_points)])
             self.candidate_topology_points.clear()
 
         for candidate in list(potential_points):
@@ -167,9 +166,27 @@ class Scout(Agent):
         x, y = target_point
         cx, cy = current
 
-        distance = abs(x - cx) + abs(y - cy)
+        distance = self.manhattan_distance(current, target_point)
 
         return self.calculate_unknown_N(target_point) * exp(-lambd*distance)
+
+    def manhattan_distance(self, current, target_point):
+        (x1, y1) = current
+        (x2, y2) = target_point
+
+        min_x = abs(x1 - x2)
+        if self.beliefs.width:
+            other_x = self.beliefs.width - min_x
+            if other_x < min_x:
+                min_x = other_x
+
+        min_y = abs(y1 - y2)
+        if self.beliefs.height:
+            other_y = self.beliefs.height - min_y
+            if other_y < min_y:
+                min_y = other_y
+
+        return min_x + min_y
 
     def generate_candidate_target_points(self, current):
         """
