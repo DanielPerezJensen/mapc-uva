@@ -47,7 +47,6 @@
 * [Contributing](#contributing)
 * [License](#license)
 * [Contact](#contact)
-* [Examples](#examples)
 * [Acknowledgements](#acknowledgements)
 
 
@@ -173,14 +172,6 @@ Thus the basic workflow of using the BDI model consists of having a `run()`-func
 <p align="center">
   <img src="images/Roadmap.png" alt="Logo">
 </p>
-
-<!-- EXAMPLES -->
-## EXAMPLES
-### Attacker
-| Disabling static enemy  | Disabling moving enemy | Adjusting enemy pathing
-| ------------- | ------------- |-------------
-| <img src="examples/attacker/static-enemy-destroyed.gif" width="400" height="400" />  | <img src="examples/attacker/enemy-destroyed.gif" width="400" height="400" />  | <img src="examples/attacker/enemy-adjust-path.gif" width="400" height="400" />
-
 
 <!-- ACKNOWLEDGEMENTS -->
 ## Acknowledgements
