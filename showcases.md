@@ -1,5 +1,6 @@
 <!-- EXAMPLES -->
 # Showcase
+Examples of possible integrations between machine learning and BDI
 ## Attacker
 | Disabling static enemy  | Disabling moving enemy | Adjusting enemy pathing
 | ------------- | ------------- |-------------
