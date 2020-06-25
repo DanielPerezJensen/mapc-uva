@@ -1,0 +1,1 @@
+This folder contains the best performing model for movement prediction for the attacker-bomber role.
