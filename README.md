@@ -176,9 +176,11 @@ Thus the basic workflow of using the BDI model consists of having a `run()`-func
 <!-- ACKNOWLEDGEMENTS -->
 ## Acknowledgements
 
+* [CCI Research group](http://cci-research.nl/)
 * Mostafa Mohajeri Parizi
 * Giovanni Sileno
 * [University of Amsterdam](https://www.uva.nl/)
+
 
 
 <!-- MARKDOWN LINKS & IMAGES -->
