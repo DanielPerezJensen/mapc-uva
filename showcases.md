@@ -11,3 +11,9 @@ Examples of possible integrations between machine learning and BDI
 | 1 blocker blocking 2 builders  | 2 blockers blocking 3 builders 
 | ------------- | ------------- 
 | <img src="examples/blocker/1-blocker-2-builders.gif" width="600" height="400" />  | <img src="examples/blocker/2-blockers-3-builders.gif" width="600" height="400" />  
+
+
+## Scout
+| Scout agent performing TGHM exploration  |
+| ------------- | 
+| <img src="examples/scout/MAPC scout exploration.gif" width="600" height="300" />  |
