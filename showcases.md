@@ -17,3 +17,9 @@ Examples of possible integrations between machine learning and BDI
 | Scout agent performing TGHM exploration  |
 | ------------- | 
 | <img src="examples/scout/MAPC scout exploration.gif" width="600" height="300" />  |
+
+
+## Builder
+| Builder agent performing retreiving and handing in simple task  |
+| ------------- | 
+| <img src="examples/builder/builder_example.gif" width="600" height="300" />  |
