@@ -20,6 +20,6 @@ Examples of possible integrations between machine learning and BDI
 
 
 ## Builder
-| Builder agent performing retreiving and handing in simple task  |
+| Builder agent retreiving and handing in simple task  |
 | ------------- | 
 | <img src="examples/builder/builder_example.gif" width="600" height="600" />  |
