@@ -52,7 +52,7 @@ pytz==2019.3
 PyYAML==5.3.1
 requests==2.24.0
 requests-oauthlib==1.3.0
-rsa==4.6
+rsa==4.7
 scipy==1.4.1
 singletonify==0.2.3
 six==1.14.0
