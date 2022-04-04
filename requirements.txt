@@ -10,7 +10,7 @@ arrow==0.15.5
 astunparse==1.6.3
 async-timeout==3.0.1
 attrs==19.3.0
-Babel==2.8.0
+Babel==2.9.1
 better-exceptions-fork==0.2.1.post6
 cachetools==4.1.0
 certifi==2020.6.20
