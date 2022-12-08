@@ -13,7 +13,7 @@ attrs==19.3.0
 Babel==2.9.1
 better-exceptions-fork==0.2.1.post6
 cachetools==4.1.0
-certifi==2020.6.20
+certifi==2022.12.7
 cffi==1.14.0
 chardet==3.0.4
 colorama==0.4.3
